@@ -30,85 +30,40 @@ import java.util.UUID;
 
 /**
  * REST controller for user management
- * Provides secure endpoints for user registration, authentication, and account management
+ * Provides secure endpoints for user administration and account management
  * 
  * Security:
- * - Public endpoints: registration, login
- * - Authenticated endpoints: profile management, password change
- * - Admin endpoints: user management, account locking/unlocking
+ * - All endpoints require authentication
+ * - Admin-only endpoints: user CRUD operations, account locking/unlocking, statistics
+ * - Admin/Auditor endpoints: user listing, search, role filtering
+ * - Admin or self: view/update user profile
+ * 
+ * Note: For authentication (login, register), see AuthController
  */
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "User Management", description = "APIs for user registration, authentication, and account management")
+@Tag(name = "User Management", description = "APIs for user administration, CRUD operations, and account management (Admin)")
 public class UserController {
     
     private final UserService userService;
     
     /**
-     * Register a new user
-     * Public endpoint
-     */
-    @Operation(
-        summary = "Register a new user",
-        description = "Creates a new user account. Available roles: ADMIN, FINANCIAL_ANALYST, SME_USER, AUDITOR"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "User created successfully",
-            content = @Content(schema = @Schema(implementation = UserResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid input data"),
-        @ApiResponse(responseCode = "409", description = "User already exists")
-    })
-    @PostMapping("/register")
-    public ResponseEntity<UserResponse> register(@Valid @RequestBody UserRegistrationRequest request) {
-        log.info("POST /api/v1/users/register - Registering user: {}", request.email());
-        UserResponse response = userService.registerUser(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-    
-    /**
-     * User login
-     * Public endpoint
-     */
-    @Operation(
-        summary = "User login",
-        description = "Authenticates a user and returns JWT tokens"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Login successful",
-            content = @Content(schema = @Schema(implementation = LoginResponse.class))),
-        @ApiResponse(responseCode = "401", description = "Invalid credentials"),
-        @ApiResponse(responseCode = "403", description = "Account locked")
-    })
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        log.info("POST /api/v1/users/login - Login attempt: {}", request.email());
-        LoginResponse response = userService.login(request);
-        return ResponseEntity.ok(response);
-    }
-    
-    /**
-     * Get current user profile
-     * Requires authentication
-     */
-    @Operation(
-        summary = "Get current user profile",
-        description = "Returns the profile of the currently authenticated user"
-    )
-    @SecurityRequirement(name = "bearer-jwt")
-    @GetMapping("/me")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal User user) {
-        log.info("GET /api/v1/users/me - Getting current user: {}", user.getEmail());
-        UserResponse response = userService.getUserById(user.getId());
-        return ResponseEntity.ok(response);
-    }
-    
-    /**
      * Get user by ID
      * Admin or self only
      */
+    @Operation(
+        summary = "Get user by ID",
+        description = "Returns user information by ID (Admin or self)"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User found",
+            content = @Content(schema = @Schema(implementation = UserResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions"),
+        @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @SecurityRequirement(name = "bearer-jwt")
     @GetMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.id")
     public ResponseEntity<UserResponse> getUserById(@PathVariable UUID userId) {
@@ -121,6 +76,18 @@ public class UserController {
      * Update user information
      * Admin or self only
      */
+    @Operation(
+        summary = "Update user information",
+        description = "Updates user profile information (Admin or self)"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User updated successfully",
+            content = @Content(schema = @Schema(implementation = UserResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid input data"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions"),
+        @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @SecurityRequirement(name = "bearer-jwt")
     @PutMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.id")
     public ResponseEntity<UserResponse> updateUser(
@@ -132,23 +99,19 @@ public class UserController {
     }
     
     /**
-     * Change password
-     * Authenticated users only (self)
-     */
-    @PostMapping("/{userId}/change-password")
-    @PreAuthorize("#userId == authentication.principal.id")
-    public ResponseEntity<Map<String, String>> changePassword(
-            @PathVariable UUID userId,
-            @Valid @RequestBody PasswordChangeRequest request) {
-        log.info("POST /api/v1/users/{}/change-password - Changing password", userId);
-        userService.changePassword(userId, request);
-        return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
-    }
-    
-    /**
      * Lock user account
      * Admin only
      */
+    @Operation(
+        summary = "Lock user account",
+        description = "Locks a user account for a specified duration (Admin only)"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Account locked successfully"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required"),
+        @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @SecurityRequirement(name = "bearer-jwt")
     @PostMapping("/{userId}/lock")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> lockAccount(
@@ -156,37 +119,76 @@ public class UserController {
             @RequestParam(defaultValue = "30") int durationMinutes) {
         log.info("POST /api/v1/users/{}/lock - Locking account for {} minutes", userId, durationMinutes);
         userService.lockAccount(userId, durationMinutes);
-        return ResponseEntity.ok(Map.of("message", "Account locked successfully"));
+        return ResponseEntity.ok(Map.of(
+            "message", "Account locked successfully",
+            "userId", userId.toString(),
+            "durationMinutes", String.valueOf(durationMinutes)
+        ));
     }
     
     /**
      * Unlock user account
      * Admin only
      */
+    @Operation(
+        summary = "Unlock user account",
+        description = "Unlocks a previously locked user account (Admin only)"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Account unlocked successfully"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required"),
+        @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @SecurityRequirement(name = "bearer-jwt")
     @PostMapping("/{userId}/unlock")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> unlockAccount(@PathVariable UUID userId) {
         log.info("POST /api/v1/users/{}/unlock - Unlocking account", userId);
         userService.unlockAccount(userId);
-        return ResponseEntity.ok(Map.of("message", "Account unlocked successfully"));
+        return ResponseEntity.ok(Map.of(
+            "message", "Account unlocked successfully",
+            "userId", userId.toString()
+        ));
     }
     
     /**
      * Delete user account
      * Admin only
      */
+    @Operation(
+        summary = "Delete user account",
+        description = "Permanently deletes a user account (Admin only)"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User deleted successfully"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required"),
+        @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @SecurityRequirement(name = "bearer-jwt")
     @DeleteMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> deleteUser(@PathVariable UUID userId) {
         log.info("DELETE /api/v1/users/{} - Deleting user", userId);
         userService.deleteUser(userId);
-        return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
+        return ResponseEntity.ok(Map.of(
+            "message", "User deleted successfully",
+            "userId", userId.toString()
+        ));
     }
     
     /**
      * Get all users with pagination
      * Admin and Auditor only
      */
+    @Operation(
+        summary = "Get all users (paginated)",
+        description = "Returns a paginated list of all users (Admin/Auditor only)"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Users retrieved successfully"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin or Auditor role required")
+    })
+    @SecurityRequirement(name = "bearer-jwt")
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR')")
     public ResponseEntity<Page<UserResponse>> getAllUsers(
@@ -207,6 +209,16 @@ public class UserController {
      * Get users by role
      * Admin and Auditor only
      */
+    @Operation(
+        summary = "Get users by role",
+        description = "Returns a paginated list of users filtered by role (Admin/Auditor only)"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Users retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid role"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin or Auditor role required")
+    })
+    @SecurityRequirement(name = "bearer-jwt")
     @GetMapping("/by-role/{role}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR')")
     public ResponseEntity<Page<UserResponse>> getUsersByRole(
@@ -224,6 +236,15 @@ public class UserController {
      * Search users
      * Admin and Auditor only
      */
+    @Operation(
+        summary = "Search users",
+        description = "Searches users by email, first name, or last name (Admin/Auditor only)"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Search results retrieved successfully"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin or Auditor role required")
+    })
+    @SecurityRequirement(name = "bearer-jwt")
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR')")
     public ResponseEntity<Page<UserResponse>> searchUsers(
@@ -241,6 +262,16 @@ public class UserController {
      * Get user statistics
      * Admin and Auditor only
      */
+    @Operation(
+        summary = "Get user statistics",
+        description = "Returns overall user statistics including counts by role (Admin/Auditor only)"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Statistics retrieved successfully",
+            content = @Content(schema = @Schema(implementation = UserStatistics.class))),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin or Auditor role required")
+    })
+    @SecurityRequirement(name = "bearer-jwt")
     @GetMapping("/statistics")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR')")
     public ResponseEntity<UserStatistics> getUserStatistics() {
