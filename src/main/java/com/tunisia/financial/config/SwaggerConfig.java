@@ -28,10 +28,11 @@ public class SwaggerConfig {
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
+                .openapi("3.1.0")  // Explicitly set OpenAPI version
                 .info(new Info()
                         .title("Financial Fraud Detection API")
                         .version("1.0.0")
-                        .description("Secure AI-Powered Financial Fraud Detection and Risk Management System for Tunisian SMEs with Intelligent Health Monitoring")
+                        .description("Secure AI-Powered Financial Fraud Detection and Risk Management System for Tunisian SMEs")
                         .contact(new Contact()
                                 .name("Financial Security Team")
                                 .email("support@financial.tn")
@@ -51,7 +52,7 @@ public class SwaggerConfig {
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
                                 .bearerFormat("JWT")
-                                .description("Enter JWT token")))
+                                .description("Enter JWT token to access protected endpoints")))
                 .addSecurityItem(new SecurityRequirement().addList("bearer-jwt"));
     }
 }

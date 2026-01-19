@@ -1,5 +1,6 @@
 package com.tunisia.financial.service.impl;
 
+import com.tunisia.financial.config.JwtUtil;
 import com.tunisia.financial.dto.*;
 import com.tunisia.financial.entity.User;
 import com.tunisia.financial.enumerations.UserRole;
@@ -30,6 +31,7 @@ public class UserServiceImpl implements UserService {
     
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
     
     // Configuration constants
     private static final int MAX_FAILED_ATTEMPTS = 5;
@@ -95,15 +97,19 @@ public class UserServiceImpl implements UserService {
             userRepository.save(user);
         }
         
+        // Generate JWT tokens
+        String accessToken = jwtUtil.generateToken(user);
+        String refreshToken = jwtUtil.generateRefreshToken(user);
+        
         log.info("Login successful for user: {}", request.email());
         
         return new LoginResponse(
-                "token-placeholder", // In production, generate actual JWT token
-                "refresh-token-placeholder", // In production, generate actual refresh token
+                accessToken,
+                refreshToken,
                 user.getId(),
                 user.getEmail(),
                 user.getRole(),
-                3600 // Token expires in 1 hour (3600 seconds)
+                86400 // Token expires in 24 hours (86400 seconds)
         );
     }
     

@@ -1,6 +1,7 @@
 package com.tunisia.financial.controller;
 
 import com.tunisia.financial.dto.*;
+import com.tunisia.financial.entity.User;
 import com.tunisia.financial.enumerations.UserRole;
 import com.tunisia.financial.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -90,11 +92,16 @@ public class UserController {
      * Get current user profile
      * Requires authentication
      */
+    @Operation(
+        summary = "Get current user profile",
+        description = "Returns the profile of the currently authenticated user"
+    )
+    @SecurityRequirement(name = "bearer-jwt")
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserResponse> getCurrentUser(@RequestAttribute("userId") UUID userId) {
-        log.info("GET /api/v1/users/me - Getting current user: {}", userId);
-        UserResponse response = userService.getUserById(userId);
+    public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal User user) {
+        log.info("GET /api/v1/users/me - Getting current user: {}", user.getEmail());
+        UserResponse response = userService.getUserById(user.getId());
         return ResponseEntity.ok(response);
     }
     
