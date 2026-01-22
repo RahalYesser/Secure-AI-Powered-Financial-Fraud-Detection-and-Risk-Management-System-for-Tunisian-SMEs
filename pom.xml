@@ -29,6 +29,9 @@
 	<properties>
 		<java.version>21</java.version>
 		<spring-ai.version>1.1.2</spring-ai.version>
+		<djl.version>0.30.0</djl.version>
+		<onnxruntime.version>1.19.2</onnxruntime.version>
+		<tensorflow.version>0.5.0</tensorflow.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -94,6 +97,45 @@
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>2.7.0</version>
 		</dependency>
+		
+		<!-- Deep Java Library (DJL) for AI/ML -->
+		<dependency>
+			<groupId>ai.djl</groupId>
+			<artifactId>api</artifactId>
+			<version>${djl.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>ai.djl.pytorch</groupId>
+			<artifactId>pytorch-engine</artifactId>
+			<version>${djl.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>ai.djl.pytorch</groupId>
+			<artifactId>pytorch-model-zoo</artifactId>
+			<version>${djl.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>ai.djl.pytorch</groupId>
+			<artifactId>pytorch-native-cpu</artifactId>
+			<version>2.1.1</version>
+			<scope>runtime</scope>
+		</dependency>
+		
+		<!-- ONNX Runtime -->
+		<dependency>
+			<groupId>com.microsoft.onnxruntime</groupId>
+			<artifactId>onnxruntime</artifactId>
+			<version>${onnxruntime.version}</version>
+		</dependency>
+		
+		<!-- TensorFlow Java -->
+		<dependency>
+			<groupId>org.tensorflow</groupId>
+			<artifactId>tensorflow-core-platform</artifactId>
+			<version>${tensorflow.version}</version>
+		</dependency>
+		
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>

@@ -1,5 +1,6 @@
 package com.tunisia.financial.service.impl;
 
+import com.tunisia.financial.dto.response.FraudDetectionResult;
 import com.tunisia.financial.dto.transaction.TransactionRequest;
 import com.tunisia.financial.dto.transaction.TransactionResponse;
 import com.tunisia.financial.dto.transaction.TransactionStatistics;
@@ -12,6 +13,7 @@ import com.tunisia.financial.exception.transaction.InsufficientFundsException;
 import com.tunisia.financial.exception.transaction.InvalidTransactionException;
 import com.tunisia.financial.exception.transaction.TransactionNotFoundException;
 import com.tunisia.financial.repository.TransactionRepository;
+import com.tunisia.financial.service.FraudDetectionService;
 import com.tunisia.financial.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,9 +37,9 @@ import java.util.UUID;
 public class TransactionServiceImpl implements TransactionService {
     
     private final TransactionRepository transactionRepository;
+    private final FraudDetectionService fraudDetectionService;
     
     private static final double FRAUD_THRESHOLD = 0.7;
-    private static final BigDecimal LARGE_TRANSACTION_THRESHOLD = new BigDecimal("10000");
     
     @Override
     public TransactionResponse createTransaction(TransactionRequest request, User user) {
@@ -46,30 +48,47 @@ public class TransactionServiceImpl implements TransactionService {
         // Validate transaction
         validateTransaction(request, user);
         
-        // Create transaction entity
+        // Create transaction entity with PENDING status
         Transaction transaction = new Transaction();
         transaction.setType(request.type());
         transaction.setAmount(request.amount());
         transaction.setDescription(request.description());
         transaction.setUser(user);
         transaction.setStatus(TransactionStatus.PENDING);
-        
-        // Calculate fraud score
-        double fraudScore = calculateFraudScore(request, user);
-        transaction.setFraudScore(fraudScore);
-        
-        // Check if transaction should be flagged as fraud
-        if (fraudScore >= FRAUD_THRESHOLD) {
-            transaction.setStatus(TransactionStatus.FRAUD_DETECTED);
-            log.warn("Transaction flagged as potential fraud. Fraud score: {}", fraudScore);
-        }
-        
-        // Generate receipt
         transaction.setReceipt(generateReceipt());
         
-        // Save transaction
+        // Save transaction immediately (PENDING state)
         Transaction savedTransaction = transactionRepository.save(transaction);
-        log.info("Transaction created successfully with ID: {}", savedTransaction.getId());
+        log.info("Transaction created with ID: {} - Running AI fraud detection...", savedTransaction.getId());
+        
+        // REAL-TIME AI FRAUD DETECTION
+        try {
+            FraudDetectionResult fraudResult = fraudDetectionService.detectFraud(savedTransaction);
+            
+            // Update fraud score
+            savedTransaction.setFraudScore(fraudResult.fraudScore());
+            
+            // Make decision based on AI analysis
+            if (fraudResult.isFraud() && fraudResult.confidence() >= FRAUD_THRESHOLD) {
+                // FRAUD DETECTED - Block transaction
+                savedTransaction.setStatus(TransactionStatus.FRAUD_DETECTED);
+                log.warn("FRAUD DETECTED for transaction {}. Confidence: {}. Reason: {}", 
+                        savedTransaction.getId(), fraudResult.confidence(), fraudResult.primaryReason());
+            } else {
+                // LEGITIMATE - Approve transaction
+                savedTransaction.setStatus(TransactionStatus.COMPLETED);
+                log.info("Transaction {} approved by AI. Confidence: {}", 
+                        savedTransaction.getId(), fraudResult.confidence());
+            }
+            
+            // Save updated status
+            savedTransaction = transactionRepository.save(savedTransaction);
+            
+        } catch (Exception e) {
+            // If AI detection fails, keep as PENDING for manual review
+            log.error("AI fraud detection failed for transaction {}, keeping PENDING for manual review", 
+                    savedTransaction.getId(), e);
+        }
         
         return convertToResponse(savedTransaction);
     }
@@ -331,31 +350,6 @@ public class TransactionServiceImpl implements TransactionService {
                 throw new InvalidTransactionException("Transaction amount exceeds limit for SME users: " + smeLimit);
             }
         }
-    }
-    
-    private double calculateFraudScore(TransactionRequest request, User user) {
-        double score = 0.0;
-        
-        // Large transaction increases fraud score
-        if (request.amount().compareTo(LARGE_TRANSACTION_THRESHOLD) > 0) {
-            score += 0.3;
-        }
-        
-        // Check transaction frequency (simplified)
-        long recentTransactions = transactionRepository.countByUserId(user.getId());
-        if (recentTransactions > 10) {
-            score += 0.2;
-        }
-        
-        // WITHDRAWAL transactions have higher fraud risk
-        if (request.type() == TransactionType.WITHDRAWAL) {
-            score += 0.15;
-        }
-        
-        // Random factor for demonstration
-        score += Math.random() * 0.1;
-        
-        return Math.min(score, 1.0);
     }
     
     private String generateReceipt() {

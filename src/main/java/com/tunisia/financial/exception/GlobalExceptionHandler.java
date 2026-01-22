@@ -146,6 +146,44 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
     
+    // Fraud detection exception handlers
+    
+    @ExceptionHandler(FraudDetectionException.class)
+    public ResponseEntity<ErrorResponse> handleFraudDetectionException(FraudDetectionException ex) {
+        log.error("Fraud detection error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Fraud detection failed",
+                ex.getMessage(),
+                Instant.now()
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+    
+    @ExceptionHandler(ModelLoadException.class)
+    public ResponseEntity<ErrorResponse> handleModelLoadException(ModelLoadException ex) {
+        log.error("Model load error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Model loading failed",
+                "Failed to load AI model. Please contact support.",
+                Instant.now()
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+    
+    @ExceptionHandler(InferenceException.class)
+    public ResponseEntity<ErrorResponse> handleInferenceException(InferenceException ex) {
+        log.error("Inference error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Model inference failed",
+                "AI model inference failed. Please try again later.",
+                Instant.now()
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+    
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex) {
         log.error("Unexpected error: ", ex);
