@@ -31,14 +31,15 @@ Thumbs.db
 .gitattributes
 
 # Docker
-Dockerfile
 docker-compose.yml
-.dockerignore
 
 # Documentation
 README.md
 HELP.md
 *.md
+
+# Frontend
+frontend/
 
 # Logs
 *.log
