@@ -152,8 +152,8 @@ The recommended and validated way to run the platform is fully local (no contain
 ### Step 1 – Clone the Repository
 
 ```bash
-git clone https://github.com/<your-username>/financial.git
-cd financial
+git clone https://github.com/RahalYesser/Secure-AI-Powered-Financial-Fraud-Detection-and-Risk-Management-System-for-Tunisian-SMEs.git
+cd Secure-AI-Powered-Financial-Fraud-Detection-and-Risk-Management-System-for-Tunisian-SMEs
 ```
 
 ### Step 2 – Configure PostgreSQL (Backend Database)
