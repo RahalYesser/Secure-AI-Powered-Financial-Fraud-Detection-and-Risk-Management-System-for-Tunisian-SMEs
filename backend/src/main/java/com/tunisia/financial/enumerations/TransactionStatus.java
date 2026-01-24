@@ -22,5 +22,10 @@ public enum TransactionStatus {
     /**
      * Transaction flagged as potential fraud
      */
-    FRAUD_DETECTED
+    FRAUD_DETECTED,
+    
+    /**
+     * Transaction cancelled by user or system
+     */
+    CANCELLED
 }

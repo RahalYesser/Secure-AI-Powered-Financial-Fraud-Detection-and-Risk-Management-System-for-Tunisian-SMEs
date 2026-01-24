@@ -84,6 +84,18 @@ public class FraudPattern {
     @Column(name = "review_notes", columnDefinition = "TEXT")
     private String reviewNotes;
     
+    /**
+     * User ID who reviewed this pattern
+     */
+    @Column(name = "reviewed_by")
+    private java.util.UUID reviewedBy;
+    
+    /**
+     * Timestamp when the pattern was reviewed
+     */
+    @Column(name = "reviewed_at")
+    private Instant reviewedAt;
+    
     @PrePersist
     protected void onCreate() {
         detectedAt = Instant.now();

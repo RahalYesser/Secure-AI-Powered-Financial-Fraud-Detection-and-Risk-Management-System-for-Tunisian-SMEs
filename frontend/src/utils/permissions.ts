@@ -13,11 +13,19 @@ export const Permissions = {
   TRANSACTION_VIEW_ALL: [UserRole.ADMIN, UserRole.AUDITOR, UserRole.FINANCIAL_ANALYST] as UserRole[],
   TRANSACTION_VIEW_OWN: [UserRole.SME_USER] as UserRole[],
   TRANSACTION_UPDATE_STATUS: [UserRole.ADMIN] as UserRole[],
+  TRANSACTION_CANCEL: [UserRole.ADMIN] as UserRole[],
   
   // Fraud Detection
   FRAUD_DETECT: [UserRole.ADMIN, UserRole.AUDITOR, UserRole.FINANCIAL_ANALYST] as UserRole[],
   FRAUD_VIEW_PATTERNS: [UserRole.ADMIN, UserRole.AUDITOR, UserRole.FINANCIAL_ANALYST] as UserRole[],
   FRAUD_RESOLVE: [UserRole.ADMIN] as UserRole[],
+  FRAUD_REVIEW: [UserRole.ADMIN, UserRole.AUDITOR, UserRole.FINANCIAL_ANALYST] as UserRole[],
+  
+  // Credit Risk Assessment
+  CREDIT_RISK_ASSESS: [UserRole.ADMIN, UserRole.FINANCIAL_ANALYST] as UserRole[],
+  CREDIT_RISK_VIEW: [UserRole.ADMIN, UserRole.FINANCIAL_ANALYST, UserRole.SME_USER, UserRole.AUDITOR] as UserRole[],
+  CREDIT_RISK_REVIEW: [UserRole.ADMIN, UserRole.FINANCIAL_ANALYST] as UserRole[],
+  CREDIT_RISK_GENERATE_REPORT: [UserRole.ADMIN, UserRole.FINANCIAL_ANALYST, UserRole.SME_USER, UserRole.AUDITOR] as UserRole[],
 } as const;
 
 export type PermissionKey = keyof typeof Permissions;

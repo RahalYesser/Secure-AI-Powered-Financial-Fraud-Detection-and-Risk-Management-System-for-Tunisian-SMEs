@@ -1,5 +1,6 @@
 package com.tunisia.financial.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tunisia.financial.enumerations.RiskCategory;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
@@ -36,6 +37,7 @@ public class CreditRiskAssessment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sme_user_id", nullable = false)
     @NotNull(message = "SME user is required")
+    @JsonIgnore
     private User smeUser;
     
     /**

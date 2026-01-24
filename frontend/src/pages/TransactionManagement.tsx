@@ -21,6 +21,7 @@ const TransactionManagement = () => {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<TransactionStatus | 'ALL'>('ALL');
+  const [selectedType, setSelectedType] = useState<TransactionType | 'ALL'>('ALL');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +32,7 @@ const TransactionManagement = () => {
 
   useEffect(() => {
     loadTransactions();
-  }, [selectedStatus]);
+  }, [selectedStatus, selectedType]);
 
   const loadTransactions = async (page = 0, size = 10) => {
     setLoading(true);
@@ -45,6 +46,8 @@ const TransactionManagement = () => {
           response = await transactionService.searchTransactions(searchQuery, { page, size });
         } else if (selectedStatus !== 'ALL') {
           response = await transactionService.getTransactionsByStatus(selectedStatus as TransactionStatus, { page, size });
+        } else if (selectedType !== 'ALL') {
+          response = await transactionService.getTransactionsByType(selectedType as TransactionType, { page, size });
         } else {
           response = await transactionService.getAllTransactions({ page, size });
         }
@@ -77,8 +80,10 @@ const TransactionManagement = () => {
         return 'warning';
       case TransactionStatus.FAILED:
         return 'error';
-      case TransactionStatus.FLAGGED:
+      case TransactionStatus.FRAUD_DETECTED:
         return 'error';
+      case TransactionStatus.CANCELLED:
+        return 'light';
       default:
         return 'light';
     }
@@ -140,10 +145,10 @@ const TransactionManagement = () => {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 flex gap-4">
+      <div className="mb-6 flex flex-wrap gap-4">
         {canViewAll && (
           <>
-            <div className="flex-1">
+            <div className="flex-1 min-w-[200px]">
               <Input
                 type="text"
                 placeholder="Search transactions..."
@@ -153,7 +158,7 @@ const TransactionManagement = () => {
             </div>
             <div className="w-48">
               <select
-                className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm"
+                className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-900 dark:border-gray-600 dark:text-white focus:border-primary-500 focus:ring-primary-500"
                 value={selectedStatus}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedStatus(e.target.value as TransactionStatus | 'ALL')}
               >
@@ -161,7 +166,21 @@ const TransactionManagement = () => {
                 <option value={TransactionStatus.COMPLETED}>Completed</option>
                 <option value={TransactionStatus.PENDING}>Pending</option>
                 <option value={TransactionStatus.FAILED}>Failed</option>
-                <option value={TransactionStatus.FLAGGED}>Flagged</option>
+                <option value={TransactionStatus.FRAUD_DETECTED}>Fraud Detected</option>
+                <option value={TransactionStatus.CANCELLED}>Cancelled</option>
+              </select>
+            </div>
+            <div className="w-48">
+              <select
+                className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-900 dark:border-gray-600 dark:text-white focus:border-primary-500 focus:ring-primary-500"
+                value={selectedType}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedType(e.target.value as TransactionType | 'ALL')}
+              >
+                <option value="ALL">All Types</option>
+                <option value={TransactionType.PAYMENT}>Payment</option>
+                <option value={TransactionType.TRANSFER}>Transfer</option>
+                <option value={TransactionType.WITHDRAWAL}>Withdrawal</option>
+                <option value={TransactionType.DEPOSIT}>Deposit</option>
               </select>
             </div>
             <Button onClick={handleSearch}>Search</Button>
@@ -289,16 +308,16 @@ const TransactionManagement = () => {
             <Button
               size="sm"
               variant="outline"
-              disabled={transactions.page === 0}
-              onClick={() => loadTransactions(transactions.page - 1)}
+              disabled={transactions.number === 0}
+              onClick={() => loadTransactions(transactions.number - 1)}
             >
               Previous
             </Button>
             <Button
               size="sm"
               variant="outline"
-              disabled={transactions.page >= transactions.totalPages - 1}
-              onClick={() => loadTransactions(transactions.page + 1)}
+              disabled={transactions.number >= transactions.totalPages - 1}
+              onClick={() => loadTransactions(transactions.number + 1)}
             >
               Next
             </Button>

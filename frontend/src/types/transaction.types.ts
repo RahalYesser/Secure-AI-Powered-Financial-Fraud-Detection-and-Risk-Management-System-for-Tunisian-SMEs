@@ -9,7 +9,8 @@ export enum TransactionStatus {
   PENDING = 'PENDING',
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
-  FLAGGED = 'FLAGGED'
+  FRAUD_DETECTED = 'FRAUD_DETECTED',
+  CANCELLED = 'CANCELLED'
 }
 
 export interface TransactionRequest {
@@ -35,8 +36,15 @@ export interface TransactionResponse {
 
 export interface TransactionStatistics {
   totalTransactions: number;
+  pendingTransactions: number;
+  completedTransactions: number;
+  failedTransactions: number;
+  fraudDetectedTransactions: number;
+  cancelledTransactions: number;
   totalAmount: number;
-  flaggedTransactions: number;
-  transactionsByType: Record<TransactionType, number>;
-  transactionsByStatus: Record<TransactionStatus, number>;
+  averageAmount: number;
+  paymentCount: number;
+  transferCount: number;
+  withdrawalCount: number;
+  depositCount: number;
 }

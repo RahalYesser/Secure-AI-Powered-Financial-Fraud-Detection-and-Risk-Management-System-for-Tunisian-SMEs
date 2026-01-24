@@ -90,12 +90,8 @@ public class UserServiceImpl implements UserService {
             throw new InvalidPasswordException("Invalid email or password");
         }
         
-        // Reset failed login attempts on successful login
-        if (user.getFailedLoginAttempts() > 0) {
-            user.setFailedLoginAttempts(0);
-            user.setLockedUntil(null);
-            userRepository.save(user);
-        }
+        // Reset login state and update last login timestamp on successful login
+        handleSuccessfulLogin(user);
         
         // Generate JWT tokens
         String accessToken = jwtUtil.generateToken(user);
@@ -278,6 +274,8 @@ public class UserServiceImpl implements UserService {
     
     private void handleSuccessfulLogin(User user) {
         user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        user.setAccountLocked(false);
         user.setLastLoginAt(Instant.now());
         userRepository.save(user);
     }

@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -39,7 +40,7 @@ public class FraudDetectionServiceImpl implements FraudDetectionService {
     private static final double FRAUD_THRESHOLD = 0.7;
     
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public FraudDetectionResult detectFraud(Transaction transaction) {
         try {
             log.info("Running fraud detection for transaction {}", transaction.getId());
@@ -73,10 +74,9 @@ public class FraudDetectionServiceImpl implements FraudDetectionService {
                     avgConfidence
             );
             
-            // Store detected fraud patterns if fraud is detected
-            if (isFraud) {
-                storeFraudPatterns(transaction, predictions, avgConfidence);
-            }
+            // Store detected fraud patterns - now includes borderline cases (>= 0.5 confidence)
+            // This allows tracking of suspicious patterns even if not flagged as definite fraud
+            storeFraudPatterns(transaction, predictions, avgConfidence);
             
             log.info("Fraud detection completed for transaction {}. Fraud: {}, Confidence: {}", 
                     transaction.getId(), isFraud, avgConfidence);
@@ -159,17 +159,19 @@ public class FraudDetectionServiceImpl implements FraudDetectionService {
     }
     
     @Override
-    public void markPatternAsReviewed(Long patternId, String reviewNotes) {
-        log.info("Marking fraud pattern {} as reviewed", patternId);
+    public void markPatternAsReviewed(Long patternId, String reviewNotes, java.util.UUID reviewerId) {
+        log.info("Marking fraud pattern {} as reviewed by user {}", patternId, reviewerId);
         
         FraudPattern pattern = fraudPatternRepository.findById(patternId)
                 .orElseThrow(() -> new IllegalArgumentException("Fraud pattern not found with ID: " + patternId));
         
         pattern.setReviewed(true);
         pattern.setReviewNotes(reviewNotes);
+        pattern.setReviewedBy(reviewerId);
+        pattern.setReviewedAt(Instant.now());
         fraudPatternRepository.save(pattern);
         
-        log.info("Fraud pattern {} marked as reviewed", patternId);
+        log.info("Fraud pattern {} marked as reviewed by user {}", patternId, reviewerId);
     }
     
     @Override
@@ -182,31 +184,180 @@ public class FraudDetectionServiceImpl implements FraudDetectionService {
                 .collect(Collectors.toList());
     }
     
+    
+    @Override
+    @Transactional(readOnly = true)
+    public com.tunisia.financial.dto.fraud.FraudStatistics getFraudStatistics() {
+        log.debug("Fetching fraud statistics");
+        
+        List<FraudPattern> allPatterns = fraudPatternRepository.findAll();
+        
+        // Count by resolution status
+        long total = allPatterns.size();
+        long resolved = allPatterns.stream().filter(FraudPattern::getReviewed).count();
+        long unresolved = total - resolved;
+        
+        // Group by severity (derived from confidence)
+        java.util.Map<String, Long> bySeverity = allPatterns.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        pattern -> {
+                            double conf = pattern.getConfidence();
+                            if (conf >= 0.9) return "CRITICAL";
+                            if (conf >= 0.75) return "HIGH";
+                            if (conf >= 0.6) return "MEDIUM";
+                            return "LOW";
+                        },
+                        java.util.stream.Collectors.counting()
+                ));
+        
+        // Group by pattern type
+        java.util.Map<String, Long> byType = allPatterns.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        FraudPattern::getPatternType,
+                        java.util.stream.Collectors.counting()
+                ));
+        
+        // Patterns over time (last 30 days)
+        Instant thirtyDaysAgo = Instant.now().minus(30, java.time.temporal.ChronoUnit.DAYS);
+        java.util.Map<String, Long> dailyCounts = allPatterns.stream()
+                .filter(p -> p.getDetectedAt().isAfter(thirtyDaysAgo))
+                .collect(java.util.stream.Collectors.groupingBy(
+                        pattern -> pattern.getDetectedAt()
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .toLocalDate()
+                                .toString(),
+                        java.util.stream.Collectors.counting()
+                ));
+        
+        // Convert to time series list
+        List<com.tunisia.financial.dto.fraud.FraudStatistics.PatternTimeSeries> timeSeries =
+                dailyCounts.entrySet().stream()
+                        .map(entry -> com.tunisia.financial.dto.fraud.FraudStatistics.PatternTimeSeries.builder()
+                                .date(entry.getKey())
+                                .count(entry.getValue())
+                                .build())
+                        .sorted(Comparator.comparing(com.tunisia.financial.dto.fraud.FraudStatistics.PatternTimeSeries::getDate))
+                        .collect(Collectors.toList());
+        
+        return com.tunisia.financial.dto.fraud.FraudStatistics.builder()
+                .totalPatterns(total)
+                .resolvedPatterns(resolved)
+                .unresolvedPatterns(unresolved)
+                .patternsBySeverity(bySeverity)
+                .patternsByType(byType)
+                .patternsOverTime(timeSeries)
+                .build();
+    }
+    
     /**
      * Store fraud patterns detected by the models
+     * Enhanced to categorize patterns and store borderline cases
      */
     private void storeFraudPatterns(Transaction transaction, 
                                    List<FraudDetectionResult.ModelPrediction> predictions,
                                    double avgConfidence) {
-        log.debug("Storing fraud patterns for transaction {}", transaction.getId());
+        log.debug("Storing fraud patterns for transaction {} with confidence {}", 
+                transaction.getId(), avgConfidence);
         
-        for (FraudDetectionResult.ModelPrediction prediction : predictions) {
-            if (prediction.isFraud()) {
-                FraudPattern pattern = new FraudPattern();
-                pattern.setPatternType("ENSEMBLE_DETECTION");
-                pattern.setDescription(prediction.reason());
-                pattern.setConfidence(prediction.confidence());
-                pattern.setTransaction(transaction);
-                pattern.setDetectorModel(prediction.modelName());
-                pattern.setMetadata(String.format(
-                        "{\"avgConfidence\": %.3f, \"threshold\": %.2f}", 
-                        avgConfidence, FRAUD_THRESHOLD
-                ));
-                
-                fraudPatternRepository.save(pattern);
-                log.debug("Stored fraud pattern from model {}", prediction.modelName());
+        // Store patterns for high-confidence fraud (>0.7) or borderline cases (0.5-0.7)
+        if (avgConfidence >= 0.5) {
+            String patternType = determinePatternType(transaction, avgConfidence);
+            String enhancedDescription = buildEnhancedDescription(transaction, predictions);
+            String metadata = buildPatternMetadata(transaction, avgConfidence);
+            
+            // Store one consolidated pattern per transaction
+            FraudPattern pattern = new FraudPattern();
+            pattern.setPatternType(patternType);
+            pattern.setDescription(enhancedDescription);
+            pattern.setConfidence(avgConfidence);
+            pattern.setTransaction(transaction);
+            pattern.setDetectorModel("ENSEMBLE");
+            pattern.setMetadata(metadata);
+            pattern.setDetectedAt(Instant.now());
+            pattern.setReviewed(false);
+            
+            fraudPatternRepository.save(pattern);
+            log.info("Stored {} pattern for transaction {} with confidence {}", 
+                    patternType, transaction.getId(), avgConfidence);
+        }
+    }
+    
+    /**
+     * Determine the type of fraud pattern based on transaction characteristics
+     */
+    private String determinePatternType(Transaction transaction, double confidence) {
+        BigDecimal amount = transaction.getAmount();
+        int hour = transaction.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).getHour();
+        
+        // High confidence patterns
+        if (confidence >= 0.7) {
+            if (amount.compareTo(BigDecimal.valueOf(10000)) > 0) {
+                return hour >= 22 || hour <= 6 ? 
+                    "HIGH_AMOUNT_LATE_NIGHT" : "HIGH_AMOUNT_UNUSUAL";
+            } else if (hour >= 22 || hour <= 6) {
+                return "LATE_NIGHT_TRANSACTION";
+            } else {
+                return "SUSPICIOUS_ACTIVITY";
             }
         }
+        
+        // Medium confidence patterns (borderline)
+        if (confidence >= 0.6) {
+            if (amount.compareTo(BigDecimal.valueOf(5000)) > 0) {
+                return "MEDIUM_RISK_HIGH_AMOUNT";
+            } else {
+                return "MEDIUM_RISK_UNUSUAL_PATTERN";
+            }
+        }
+        
+        // Low-medium confidence
+        return "BORDERLINE_SUSPICIOUS";
+    }
+    
+    /**
+     * Build enhanced description with details from all models
+     */
+    private String buildEnhancedDescription(Transaction transaction, 
+                                           List<FraudDetectionResult.ModelPrediction> predictions) {
+        StringBuilder desc = new StringBuilder();
+        desc.append(String.format("Transaction #%d: $%.2f %s. ", 
+                transaction.getId(), 
+                transaction.getAmount(), 
+                transaction.getType()));
+        
+        long fraudCount = predictions.stream().filter(FraudDetectionResult.ModelPrediction::isFraud).count();
+        desc.append(String.format("%d of %d models flagged as fraud. ", fraudCount, predictions.size()));
+        
+        // Add reasons from models that detected fraud
+        predictions.stream()
+                .filter(FraudDetectionResult.ModelPrediction::isFraud)
+                .forEach(p -> desc.append(String.format("%s: %s. ", p.modelName(), p.reason())));
+        
+        return desc.toString().trim();
+    }
+    
+    /**
+     * Build detailed metadata JSON for pattern analysis
+     */
+    private String buildPatternMetadata(Transaction transaction, double avgConfidence) {
+        int hour = transaction.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).getHour();
+        int dayOfWeek = transaction.getCreatedAt().atZone(java.time.ZoneId.systemDefault())
+                .getDayOfWeek().getValue();
+        
+        return String.format(
+                "{\"avgConfidence\": %.3f, \"threshold\": %.2f, \"amount\": %.2f, " +
+                "\"hour\": %d, \"dayOfWeek\": %d, \"type\": \"%s\", \"isWeekend\": %b, " +
+                "\"isBusinessHours\": %b, \"detectionTimestamp\": \"%s\"}",
+                avgConfidence, 
+                FRAUD_THRESHOLD, 
+                transaction.getAmount(),
+                hour,
+                dayOfWeek,
+                transaction.getType(),
+                dayOfWeek >= 6,
+                hour >= 9 && hour <= 17,
+                Instant.now()
+        );
     }
     
     /**

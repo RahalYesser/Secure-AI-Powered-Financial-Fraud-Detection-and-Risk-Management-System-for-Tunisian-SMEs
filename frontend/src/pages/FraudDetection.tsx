@@ -46,15 +46,16 @@ const FraudDetection = () => {
   const handleResolve = async (patternId: number) => {
     if (!confirm('Mark this fraud pattern as resolved?')) return;
     try {
-      await fraudService.resolvePattern(patternId);
+      await fraudService.reviewPattern(patternId, 'Resolved');
       loadPatterns();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to resolve pattern');
     }
   };
 
-  const getSeverityBadgeColor = (severity: string) => {
-    switch (severity.toUpperCase()) {
+  const getSeverityBadgeColor = (severity?: string | null) => {
+    const level = (severity || 'LOW').toUpperCase();
+    switch (level) {
       case 'CRITICAL':
       case 'HIGH':
         return 'error';
@@ -69,6 +70,14 @@ const FraudDetection = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
+  };
+
+  const getSeverityFromConfidence = (confidence?: number) => {
+    if (confidence === undefined || confidence === null) return 'LOW';
+    if (confidence >= 0.9) return 'CRITICAL';
+    if (confidence >= 0.7) return 'HIGH';
+    if (confidence >= 0.4) return 'MEDIUM';
+    return 'LOW';
   };
 
   if (!canAccessFraud) {
@@ -116,20 +125,20 @@ const FraudDetection = () => {
         <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
           <div className="text-sm text-gray-500 dark:text-gray-400">Unresolved</div>
           <div className="mt-1 text-2xl font-semibold text-error-600 dark:text-error-400">
-            {patterns?.content.filter(p => !p.resolved).length || 0}
+				{patterns?.content.filter(p => !p.reviewed).length || 0}
           </div>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
           <div className="text-sm text-gray-500 dark:text-gray-400">Resolved</div>
           <div className="mt-1 text-2xl font-semibold text-success-600 dark:text-success-400">
-            {patterns?.content.filter(p => p.resolved).length || 0}
+				{patterns?.content.filter(p => p.reviewed).length || 0}
           </div>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
           <div className="text-sm text-gray-500 dark:text-gray-400">Detection Rate</div>
           <div className="mt-1 text-2xl font-semibold text-brand-600 dark:text-brand-400">
             {patterns?.totalElements ? 
-              ((patterns.content.filter(p => p.resolved).length / patterns.totalElements) * 100).toFixed(1) 
+						((patterns.content.filter(p => p.reviewed).length / patterns.totalElements) * 100).toFixed(1) 
               : '0'}%
           </div>
         </div>
@@ -194,9 +203,14 @@ const FraudDetection = () => {
                     <Badge color="info">{pattern.patternType}</Badge>
                   </TableCell>
                   <TableCell className="px-6 py-4">
-                    <Badge color={getSeverityBadgeColor(pattern.severity)}>
-                      {pattern.severity}
-                    </Badge>
+                    {(() => {
+                      const severity = getSeverityFromConfidence(pattern.confidence);
+                      return (
+                        <Badge color={getSeverityBadgeColor(severity)}>
+                          {severity}
+                        </Badge>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="px-6 py-4">
                     <div className="max-w-xs truncate text-sm text-gray-500 dark:text-gray-400">
@@ -204,10 +218,10 @@ const FraudDetection = () => {
                     </div>
                   </TableCell>
                   <TableCell className="px-6 py-4">
-                    {pattern.resolved ? (
-                      <Badge color="success">Resolved</Badge>
+                    {pattern.reviewed ? (
+                      <Badge color="success">Reviewed</Badge>
                     ) : (
-                      <Badge color="error">Unresolved</Badge>
+                      <Badge color="error">Unreviewed</Badge>
                     )}
                   </TableCell>
                   <TableCell className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
@@ -215,7 +229,7 @@ const FraudDetection = () => {
                   </TableCell>
                   {canResolve && (
                     <TableCell className="px-6 py-4 text-right">
-                      {!pattern.resolved && (
+                      {!pattern.reviewed && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -243,16 +257,16 @@ const FraudDetection = () => {
             <Button
               size="sm"
               variant="outline"
-              disabled={patterns.page === 0}
-              onClick={() => loadPatterns(patterns.page - 1)}
+              disabled={patterns.number === 0}
+              onClick={() => loadPatterns(patterns.number - 1)}
             >
               Previous
             </Button>
             <Button
               size="sm"
               variant="outline"
-              disabled={patterns.page >= patterns.totalPages - 1}
-              onClick={() => loadPatterns(patterns.page + 1)}
+              disabled={patterns.number >= patterns.totalPages - 1}
+              onClick={() => loadPatterns(patterns.number + 1)}
             >
               Next
             </Button>

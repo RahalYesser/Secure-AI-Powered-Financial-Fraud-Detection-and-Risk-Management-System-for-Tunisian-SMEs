@@ -14,6 +14,7 @@ public record TransactionStatistics(
         Long completedTransactions,
         Long failedTransactions,
         Long fraudDetectedTransactions,
+        Long cancelledTransactions,
         BigDecimal totalAmount,
         BigDecimal averageAmount,
         Long paymentCount,

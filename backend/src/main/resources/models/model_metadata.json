@@ -1,0 +1,108 @@
+{
+  "n_features": 16,
+  "feature_names": [
+    "amount",
+    "amount_log",
+    "amount_sqrt",
+    "hour",
+    "hour_sin",
+    "hour_cos",
+    "is_night",
+    "is_business_hours",
+    "transaction_type_encoded",
+    "merchant_category_encoded",
+    "country_encoded",
+    "device_risk_score",
+    "ip_risk_score",
+    "risk_score_product",
+    "risk_score_avg",
+    "risk_score_max"
+  ],
+  "metrics": {
+    "train_accuracy": 1.0,
+    "test_accuracy": 1.0,
+    "roc_auc": 1.0,
+    "confusion_matrix": [
+      [
+        1900,
+        0
+      ],
+      [
+        0,
+        100
+      ]
+    ],
+    "feature_importance": [
+      {
+        "feature": "risk_score_product",
+        "importance": 0.19793873888636457
+      },
+      {
+        "feature": "ip_risk_score",
+        "importance": 0.19533259591345933
+      },
+      {
+        "feature": "risk_score_max",
+        "importance": 0.19194991211440235
+      },
+      {
+        "feature": "device_risk_score",
+        "importance": 0.19091364429869856
+      },
+      {
+        "feature": "risk_score_avg",
+        "importance": 0.12014454955668784
+      },
+      {
+        "feature": "amount_log",
+        "importance": 0.03521383425321376
+      },
+      {
+        "feature": "amount",
+        "importance": 0.03163340684198458
+      },
+      {
+        "feature": "amount_sqrt",
+        "importance": 0.02963714170789359
+      },
+      {
+        "feature": "is_night",
+        "importance": 0.003328035856448149
+      },
+      {
+        "feature": "hour_cos",
+        "importance": 0.0018582194069143524
+      },
+      {
+        "feature": "hour",
+        "importance": 0.0016368295515915216
+      },
+      {
+        "feature": "hour_sin",
+        "importance": 0.00041309161234106477
+      },
+      {
+        "feature": "is_business_hours",
+        "importance": 2.4550932524407316e-16
+      },
+      {
+        "feature": "country_encoded",
+        "importance": 1.0145827180810085e-17
+      },
+      {
+        "feature": "transaction_type_encoded",
+        "importance": 1.5519129586839149e-18
+      },
+      {
+        "feature": "merchant_category_encoded",
+        "importance": 0.0
+      }
+    ]
+  },
+  "model_config": {
+    "n_estimators": 150,
+    "max_depth": 15,
+    "min_samples_split": 20,
+    "min_samples_leaf": 10
+  }
+}

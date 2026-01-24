@@ -11,7 +11,7 @@ export interface ValidationErrorResponse extends ErrorResponse {
 
 export interface PaginatedResponse<T> {
   content: T[];
-  page: number;
+  number: number;  // Spring Page uses 'number' field for current page (0-indexed)
   size: number;
   totalElements: number;
   totalPages: number;

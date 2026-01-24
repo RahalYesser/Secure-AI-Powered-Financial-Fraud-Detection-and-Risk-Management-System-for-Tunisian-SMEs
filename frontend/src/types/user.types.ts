@@ -38,7 +38,9 @@ export interface PasswordChangeRequest {
 
 export interface UserStatistics {
   totalUsers: number;
-  activeUsers: number;
   lockedUsers: number;
-  usersByRole: Record<UserRole, number>;
+  adminCount: number;
+  analystCount: number;
+  smeUserCount: number;
+  auditorCount: number;
 }

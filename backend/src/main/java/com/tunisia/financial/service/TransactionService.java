@@ -3,6 +3,7 @@ package com.tunisia.financial.service;
 import com.tunisia.financial.dto.transaction.TransactionRequest;
 import com.tunisia.financial.dto.transaction.TransactionResponse;
 import com.tunisia.financial.dto.transaction.TransactionStatistics;
+import com.tunisia.financial.dto.transaction.TransactionTrends;
 import com.tunisia.financial.entity.Transaction;
 import com.tunisia.financial.entity.User;
 import com.tunisia.financial.enumerations.TransactionStatus;
@@ -88,6 +89,13 @@ public interface TransactionService {
      * Get transaction statistics
      */
     TransactionStatistics getTransactionStatistics();
+    
+    /**
+     * Get transaction trends over time
+     * @param days number of days to include in trends
+     * @return transaction trends with count and amount by date
+     */
+    TransactionTrends getTransactionTrends(int days);
     
     /**
      * Get user transaction statistics

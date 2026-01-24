@@ -15,13 +15,13 @@ export interface FraudDetectionResult {
 
 export interface FraudPatternResponse {
   id: number;
-  transactionId: number;
-  userId: string;
   patternType: string;
-  severity: string;
   description: string;
+  confidence: number;
+  transactionId: number;
+  detectorModel: string;
   detectedAt: string;
-  resolved: boolean;
+  reviewed: boolean;
 }
 
 export interface FraudStatistics {
@@ -29,6 +29,7 @@ export interface FraudStatistics {
   resolvedPatterns: number;
   unresolvedPatterns: number;
   patternsBySeverity: Record<string, number>;
+  patternsByType: Record<string, number>;
   patternsOverTime: Array<{
     date: string;
     count: number;

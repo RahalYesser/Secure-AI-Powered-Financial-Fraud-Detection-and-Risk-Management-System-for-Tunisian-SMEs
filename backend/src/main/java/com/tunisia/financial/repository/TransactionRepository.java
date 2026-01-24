@@ -104,6 +104,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     long countByUserId(UUID userId);
     
     /**
+     * Find transactions created after a specific date
+     */
+    List<Transaction> findByCreatedAtAfter(Instant createdAt);
+    
+    /**
      * Get total transaction amount by user
      */
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.user.id = :userId AND t.status = :status")

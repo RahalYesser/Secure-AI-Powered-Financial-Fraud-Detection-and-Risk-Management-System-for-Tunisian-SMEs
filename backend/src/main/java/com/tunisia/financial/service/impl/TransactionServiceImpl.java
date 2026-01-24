@@ -4,6 +4,7 @@ import com.tunisia.financial.dto.response.FraudDetectionResult;
 import com.tunisia.financial.dto.transaction.TransactionRequest;
 import com.tunisia.financial.dto.transaction.TransactionResponse;
 import com.tunisia.financial.dto.transaction.TransactionStatistics;
+import com.tunisia.financial.dto.transaction.TransactionTrends;
 import com.tunisia.financial.entity.Transaction;
 import com.tunisia.financial.entity.User;
 import com.tunisia.financial.enumerations.TransactionStatus;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -40,6 +42,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final FraudDetectionService fraudDetectionService;
     
     private static final double FRAUD_THRESHOLD = 0.7;
+    private static final BigDecimal HIGH_AMOUNT_THRESHOLD = new BigDecimal("10000");
     
     @Override
     public TransactionResponse createTransaction(TransactionRequest request, User user) {
@@ -67,9 +70,16 @@ public class TransactionServiceImpl implements TransactionService {
             
             // Update fraud score
             savedTransaction.setFraudScore(fraudResult.fraudScore());
+            boolean isHighAmount = savedTransaction.getAmount() != null &&
+                    savedTransaction.getAmount().compareTo(HIGH_AMOUNT_THRESHOLD) >= 0;
             
             // Make decision based on AI analysis
-            if (fraudResult.isFraud() && fraudResult.confidence() >= FRAUD_THRESHOLD) {
+            if (isHighAmount) {
+                // High-amount transactions are always held for review
+                savedTransaction.setStatus(TransactionStatus.FRAUD_DETECTED);
+                log.warn("High-amount transaction {} (amount: {}) automatically flagged as FRAUD_DETECTED (AI confidence: {}, reason: {})",
+                        savedTransaction.getId(), savedTransaction.getAmount(), fraudResult.confidence(), fraudResult.primaryReason());
+            } else if (fraudResult.isFraud() && fraudResult.confidence() >= FRAUD_THRESHOLD) {
                 // FRAUD DETECTED - Block transaction
                 savedTransaction.setStatus(TransactionStatus.FRAUD_DETECTED);
                 log.warn("FRAUD DETECTED for transaction {}. Confidence: {}. Reason: {}", 
@@ -216,12 +226,13 @@ public class TransactionServiceImpl implements TransactionService {
             throw new AccessDeniedException("You don't have permission to cancel this transaction");
         }
         
-        // Can only cancel pending transactions
-        if (transaction.getStatus() != TransactionStatus.PENDING) {
-            throw new InvalidTransactionException("Only pending transactions can be cancelled");
+        // Can only cancel pending or fraud-detected transactions
+        if (transaction.getStatus() != TransactionStatus.PENDING &&
+                transaction.getStatus() != TransactionStatus.FRAUD_DETECTED) {
+            throw new InvalidTransactionException("Only pending or fraud-detected transactions can be cancelled. Current status: " + transaction.getStatus());
         }
         
-        transaction.setStatus(TransactionStatus.FAILED);
+        transaction.setStatus(TransactionStatus.CANCELLED);
         Transaction cancelledTransaction = transactionRepository.save(transaction);
         
         log.info("Transaction cancelled successfully");
@@ -238,6 +249,7 @@ public class TransactionServiceImpl implements TransactionService {
         long completedTransactions = transactionRepository.countByStatus(TransactionStatus.COMPLETED);
         long failedTransactions = transactionRepository.countByStatus(TransactionStatus.FAILED);
         long fraudDetectedTransactions = transactionRepository.countByStatus(TransactionStatus.FRAUD_DETECTED);
+        long cancelledTransactions = transactionRepository.countByStatus(TransactionStatus.CANCELLED);
         
         BigDecimal totalAmount = transactionRepository.sumAmountByStatus(TransactionStatus.COMPLETED);
         BigDecimal averageAmount = transactionRepository.getAverageCompletedAmount();
@@ -253,6 +265,7 @@ public class TransactionServiceImpl implements TransactionService {
                 completedTransactions,
                 failedTransactions,
                 fraudDetectedTransactions,
+                cancelledTransactions,
                 totalAmount,
                 averageAmount,
                 paymentCount,
@@ -260,6 +273,47 @@ public class TransactionServiceImpl implements TransactionService {
                 withdrawalCount,
                 depositCount
         );
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public TransactionTrends getTransactionTrends(int days) {
+        log.debug("Calculating transaction trends for last {} days", days);
+        
+        Instant startDate = Instant.now().minus(days, java.time.temporal.ChronoUnit.DAYS);
+        
+        // Get all transactions in the date range
+        List<Transaction> transactions = transactionRepository.findByCreatedAtAfter(startDate);
+        
+        // Group by date
+        java.util.Map<String, List<Transaction>> byDate = transactions.stream()
+                .collect(java.util.stream.Collectors.groupingBy(t -> 
+                        t.getCreatedAt().atZone(java.time.ZoneId.systemDefault())
+                                .toLocalDate().toString()
+                ));
+        
+        // Calculate trends
+        List<TransactionTrends.TrendDataPoint> trends = byDate.entrySet().stream()
+                .map(entry -> {
+                    String date = entry.getKey();
+                    List<Transaction> dayTransactions = entry.getValue();
+                    long count = dayTransactions.size();
+                    BigDecimal amount = dayTransactions.stream()
+                            .map(Transaction::getAmount)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    
+                    return TransactionTrends.TrendDataPoint.builder()
+                            .date(date)
+                            .count(count)
+                            .amount(amount)
+                            .build();
+                })
+                .sorted(java.util.Comparator.comparing(TransactionTrends.TrendDataPoint::getDate))
+                .collect(java.util.stream.Collectors.toList());
+        
+        return TransactionTrends.builder()
+                .trends(trends)
+                .build();
     }
     
     @Override
@@ -275,6 +329,7 @@ public class TransactionServiceImpl implements TransactionService {
         long completedTransactions = transactionRepository.findByUserIdAndStatus(userId, TransactionStatus.COMPLETED, Pageable.unpaged()).getTotalElements();
         long failedTransactions = transactionRepository.findByUserIdAndStatus(userId, TransactionStatus.FAILED, Pageable.unpaged()).getTotalElements();
         long fraudDetectedTransactions = transactionRepository.findByUserIdAndStatus(userId, TransactionStatus.FRAUD_DETECTED, Pageable.unpaged()).getTotalElements();
+        long cancelledTransactions = transactionRepository.findByUserIdAndStatus(userId, TransactionStatus.CANCELLED, Pageable.unpaged()).getTotalElements();
         
         BigDecimal totalAmount = transactionRepository.sumAmountByUserIdAndStatus(userId, TransactionStatus.COMPLETED);
         BigDecimal averageAmount = completedTransactions > 0 ? totalAmount.divide(BigDecimal.valueOf(completedTransactions), 2, BigDecimal.ROUND_HALF_UP) : BigDecimal.ZERO;
@@ -290,6 +345,7 @@ public class TransactionServiceImpl implements TransactionService {
                 completedTransactions,
                 failedTransactions,
                 fraudDetectedTransactions,
+                cancelledTransactions,
                 totalAmount,
                 averageAmount,
                 paymentCount,
@@ -372,9 +428,16 @@ public class TransactionServiceImpl implements TransactionService {
     }
     
     private void validateStatusTransition(TransactionStatus currentStatus, TransactionStatus newStatus) {
-        // COMPLETED and FRAUD_DETECTED are final states
-        if (currentStatus == TransactionStatus.COMPLETED || currentStatus == TransactionStatus.FRAUD_DETECTED) {
-            throw new InvalidTransactionException("Cannot change status of " + currentStatus + " transaction");
+        // COMPLETED is a final state
+        if (currentStatus == TransactionStatus.COMPLETED) {
+            throw new InvalidTransactionException("Cannot change status of COMPLETED transaction");
+        }
+        
+        // FRAUD_DETECTED can only move to COMPLETED or CANCELLED after review
+        if (currentStatus == TransactionStatus.FRAUD_DETECTED &&
+                newStatus != TransactionStatus.COMPLETED &&
+                newStatus != TransactionStatus.CANCELLED) {
+            throw new InvalidTransactionException("Fraud-detected transactions can only be set to COMPLETED or CANCELLED after review");
         }
         
         // PENDING can transition to any status

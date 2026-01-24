@@ -1,5 +1,6 @@
 package com.tunisia.financial.service;
 
+import com.tunisia.financial.dto.fraud.FraudStatistics;
 import com.tunisia.financial.dto.response.FraudDetectionResult;
 import com.tunisia.financial.dto.response.FraudPatternResponse;
 import com.tunisia.financial.entity.FraudPattern;
@@ -74,8 +75,9 @@ public interface FraudDetectionService {
      * 
      * @param patternId the fraud pattern ID
      * @param reviewNotes optional review notes
+     * @param reviewerId the ID of the user reviewing the pattern
      */
-    void markPatternAsReviewed(Long patternId, String reviewNotes);
+    void markPatternAsReviewed(Long patternId, String reviewNotes, java.util.UUID reviewerId);
     
     /**
      * Get fraud patterns detected within a date range
@@ -85,4 +87,11 @@ public interface FraudDetectionService {
      * @return list of fraud patterns detected in the range
      */
     List<FraudPatternResponse> getFraudPatternsByDateRange(Instant startDate, Instant endDate);
+    
+    /**
+     * Get fraud detection statistics
+     * 
+     * @return comprehensive fraud statistics including patterns by type and severity
+     */
+    FraudStatistics getFraudStatistics();
 }

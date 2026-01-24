@@ -21,6 +21,35 @@ export const fraudService = {
     return response.data;
   },
 
+  // Get unreviewed fraud patterns
+  getUnreviewedPatterns: async (params?: SearchParams): Promise<PaginatedResponse<FraudPatternResponse>> => {
+    const response = await api.get(`${API_BASE}/patterns/unreviewed`, { params });
+    return response.data;
+  },
+
+  // Get high-confidence fraud patterns
+  getHighConfidencePatterns: async (
+    confidenceThreshold: number,
+    params?: SearchParams
+  ): Promise<PaginatedResponse<FraudPatternResponse>> => {
+    const response = await api.get(`${API_BASE}/patterns/high-confidence`, {
+      params: { threshold: confidenceThreshold, ...params }
+    });
+    return response.data;
+  },
+
+  // Get fraud patterns by date range
+  getPatternsByDateRange: async (
+    startDate: string,
+    endDate: string,
+    params?: SearchParams
+  ): Promise<PaginatedResponse<FraudPatternResponse>> => {
+    const response = await api.get(`${API_BASE}/patterns/date-range`, {
+      params: { startDate, endDate, ...params }
+    });
+    return response.data;
+  },
+
   // Get fraud patterns by transaction ID
   getPatternsByTransactionId: async (transactionId: number): Promise<FraudPatternResponse[]> => {
     const response = await api.get(`${API_BASE}/patterns/transaction/${transactionId}`);

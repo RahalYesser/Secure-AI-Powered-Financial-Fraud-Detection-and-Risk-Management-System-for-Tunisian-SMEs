@@ -4,6 +4,7 @@ import com.tunisia.financial.dto.ErrorResponse;
 import com.tunisia.financial.dto.transaction.TransactionRequest;
 import com.tunisia.financial.dto.transaction.TransactionResponse;
 import com.tunisia.financial.dto.transaction.TransactionStatistics;
+import com.tunisia.financial.dto.transaction.TransactionTrends;
 import com.tunisia.financial.entity.User;
 import com.tunisia.financial.enumerations.TransactionStatus;
 import com.tunisia.financial.enumerations.TransactionType;
@@ -272,6 +273,21 @@ public class TransactionController {
         log.info("Fetching transaction statistics");
         TransactionStatistics statistics = transactionService.getTransactionStatistics();
         return ResponseEntity.ok(statistics);
+    }
+    
+    @GetMapping("/trends")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'FINANCIAL_ANALYST')")
+    @Operation(summary = "Get transaction trends", description = "Get transaction trends over time (count and amount by date)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Trends retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    public ResponseEntity<TransactionTrends> getTransactionTrends(
+            @RequestParam(defaultValue = "30") int days) {
+        log.info("Fetching transaction trends for last {} days", days);
+        TransactionTrends trends = transactionService.getTransactionTrends(days);
+        return ResponseEntity.ok(trends);
     }
     
     @GetMapping("/my-statistics")

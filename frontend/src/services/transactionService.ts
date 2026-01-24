@@ -3,7 +3,8 @@ import {
   TransactionRequest,
   TransactionResponse,
   TransactionStatistics,
-  TransactionStatus
+  TransactionStatus,
+  TransactionType
 } from '../types/transaction.types';
 import { PaginatedResponse, SearchParams } from '../types/common.types';
 
@@ -48,6 +49,48 @@ export const transactionService = {
     return response.data;
   },
 
+  // Get transactions by type
+  getTransactionsByType: async (type: TransactionType, params?: SearchParams): Promise<PaginatedResponse<TransactionResponse>> => {
+    const response = await api.get(`${API_BASE}/type/${type}`, { params });
+    return response.data;
+  },
+
+  // Get transaction by reference number
+  getTransactionByReference: async (referenceNumber: string): Promise<TransactionResponse> => {
+    const response = await api.get(`${API_BASE}/reference/${referenceNumber}`);
+    return response.data;
+  },
+
+  // Get transactions by date range
+  getTransactionsByDateRange: async (
+    startDate: string,
+    endDate: string,
+    params?: SearchParams
+  ): Promise<PaginatedResponse<TransactionResponse>> => {
+    const response = await api.get(`${API_BASE}/date-range`, {
+      params: { startDate, endDate, ...params }
+    });
+    return response.data;
+  },
+
+  // Cancel transaction
+  cancelTransaction: async (id: number): Promise<TransactionResponse> => {
+    const response = await api.post(`${API_BASE}/${id}/cancel`);
+    return response.data;
+  },
+
+  // Get my statistics (for current user)
+  getMyStatistics: async (): Promise<TransactionStatistics> => {
+    const response = await api.get(`${API_BASE}/my-statistics`);
+    return response.data;
+  },
+
+  // Get statistics for specific user
+  getUserStatistics: async (userId: string): Promise<TransactionStatistics> => {
+    const response = await api.get(`${API_BASE}/user/${userId}/statistics`);
+    return response.data;
+  },
+
   // Create batch transactions - Note: Backend doesn't have batch endpoint yet
   createBatchTransactions: async (data: TransactionRequest[]): Promise<TransactionResponse[]> => {
     const results = await Promise.all(
@@ -60,6 +103,12 @@ export const transactionService = {
   getTransactionStatistics: async (): Promise<TransactionStatistics> => {
     const response = await api.get(`${API_BASE}/statistics`);
     return response.data;
+  },
+
+  // Get transaction trends over time
+  getTransactionTrends: async (days: number = 30): Promise<Array<{date: string, count: number, amount: number}>> => {
+    const response = await api.get(`${API_BASE}/trends`, { params: { days } });
+    return response.data.trends;
   },
 
   // Update transaction status (Admin only) - Backend uses PUT with query param, not PATCH with body

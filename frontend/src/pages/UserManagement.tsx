@@ -279,16 +279,16 @@ const UserManagement = () => {
             <Button
               size="sm"
               variant="outline"
-              disabled={users.page === 0}
-              onClick={() => loadUsers(users.page - 1)}
+              disabled={users.number === 0}
+              onClick={() => loadUsers(users.number - 1)}
             >
               Previous
             </Button>
             <Button
               size="sm"
               variant="outline"
-              disabled={users.page >= users.totalPages - 1}
-              onClick={() => loadUsers(users.page + 1)}
+              disabled={users.number >= users.totalPages - 1}
+              onClick={() => loadUsers(users.number + 1)}
             >
               Next
             </Button>

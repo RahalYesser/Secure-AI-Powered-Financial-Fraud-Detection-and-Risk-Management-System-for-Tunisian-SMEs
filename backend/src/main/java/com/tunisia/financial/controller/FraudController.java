@@ -4,6 +4,7 @@ import com.tunisia.financial.dto.ErrorResponse;
 import com.tunisia.financial.dto.response.FraudDetectionResult;
 import com.tunisia.financial.dto.response.FraudPatternResponse;
 import com.tunisia.financial.entity.Transaction;
+import com.tunisia.financial.entity.User;
 import com.tunisia.financial.repository.TransactionRepository;
 import com.tunisia.financial.service.FraudDetectionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,6 +25,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -176,16 +178,39 @@ public class FraudController {
     })
     public ResponseEntity<Map<String, String>> reviewPattern(
             @PathVariable Long patternId,
-            @RequestBody(required = false) Map<String, String> reviewData) {
+            @RequestBody(required = false) Map<String, String> reviewData,
+            @AuthenticationPrincipal User user) {
         
-        log.info("Reviewing fraud pattern {}", patternId);
+        log.info("Reviewing fraud pattern {} by user {}", patternId, user.getEmail());
         String reviewNotes = reviewData != null ? reviewData.get("reviewNotes") : null;
-        fraudDetectionService.markPatternAsReviewed(patternId, reviewNotes);
+        fraudDetectionService.markPatternAsReviewed(patternId, reviewNotes, user.getId());
         
         return ResponseEntity.ok(Map.of(
                 "message", "Fraud pattern marked as reviewed successfully",
-                "patternId", patternId.toString()
+                "patternId", patternId.toString(),
+                "reviewedBy", user.getEmail()
         ));
+    }
+    
+    @GetMapping("/statistics")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'FINANCIAL_ANALYST')")
+    @Operation(summary = "Get fraud statistics", 
+               description = "Retrieve comprehensive fraud detection statistics including patterns by type and severity")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Statistics retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    public ResponseEntity<?> getFraudStatistics() {
+        log.debug("Fetching fraud statistics");
+        try {
+            var statistics = fraudDetectionService.getFraudStatistics();
+            return ResponseEntity.ok(statistics);
+        } catch (Exception e) {
+            log.error("Error fetching fraud statistics", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch fraud statistics", "message", e.getMessage()));
+        }
     }
     
     @PostMapping("/models/{modelType}/update")
