@@ -5,8 +5,6 @@ import com.tunisia.financial.dto.response.FraudDetectionResult;
 import com.tunisia.financial.entity.Transaction;
 import com.tunisia.financial.exception.InferenceException;
 import com.tunisia.financial.exception.ModelLoadException;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -25,23 +23,30 @@ public class ONNXFraudDetector implements FraudDetectionStrategy {
     private OrtEnvironment env;
     private OrtSession session;
     private static final String MODEL_NAME = "ONNX-Runtime";
+    private volatile boolean initialized = false;
     
-    @PostConstruct
-    public void init() {
-        try {
-            log.info("Initializing ONNX Fraud Detector...");
-            env = OrtEnvironment.getEnvironment();
-            // In production, load actual ONNX model file
-            //session = env.createSession("path/to/fraud_model.onnx", new OrtSession.SessionOptions());
-            log.info("ONNX Fraud Detector initialized successfully");
-        } catch (Exception e) {
-            log.error("Failed to initialize ONNX model", e);
-            throw new ModelLoadException(MODEL_NAME, e);
+    /**
+     * Lazy initialization - only load model when first used
+     */
+    private synchronized void ensureInitialized() {
+        if (!initialized) {
+            try {
+                log.info("Lazy initializing ONNX Fraud Detector...");
+                env = OrtEnvironment.getEnvironment();
+                // In production, load actual ONNX model file
+                //session = env.createSession("path/to/fraud_model.onnx", new OrtSession.SessionOptions());
+                initialized = true;
+                log.info("ONNX Fraud Detector initialized successfully");
+            } catch (Exception e) {
+                log.error("Failed to initialize ONNX model", e);
+                throw new ModelLoadException(MODEL_NAME, e);
+            }
         }
     }
     
     @Override
     public FraudDetectionResult.ModelPrediction detect(Transaction transaction) {
+        ensureInitialized();
         try {
             log.debug("Running ONNX fraud detection for transaction {}", transaction.getId());
             
@@ -117,20 +122,5 @@ public class ONNXFraudDetector implements FraudDetectionStrategy {
             return "Anomalous pattern detected by ONNX model";
         }
         return "Transaction within normal parameters";
-    }
-    
-    @PreDestroy
-    public void cleanup() {
-        try {
-            if (session != null) {
-                session.close();
-            }
-            if (env != null) {
-                // Note: OrtEnvironment should not be closed if it's the global instance
-                log.info("ONNX model resources released");
-            }
-        } catch (Exception e) {
-            log.error("Error cleaning up ONNX resources", e);
-        }
     }
 }

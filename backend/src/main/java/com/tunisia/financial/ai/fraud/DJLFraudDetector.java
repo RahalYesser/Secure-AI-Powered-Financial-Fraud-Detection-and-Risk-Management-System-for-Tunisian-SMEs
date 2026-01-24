@@ -10,8 +10,6 @@ import com.tunisia.financial.dto.response.FraudDetectionResult;
 import com.tunisia.financial.entity.Transaction;
 import com.tunisia.financial.exception.InferenceException;
 import com.tunisia.financial.exception.ModelLoadException;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -28,22 +26,29 @@ public class DJLFraudDetector implements FraudDetectionStrategy {
     
     private ZooModel<float[], float[]> model;
     private static final String MODEL_NAME = "DJL-PyTorch";
+    private volatile boolean initialized = false;
     
-    @PostConstruct
-    public void init() {
-        try {
-            log.info("Initializing DJL Fraud Detector...");
-            // In production, you would load a real pre-trained model
-            // For basic implementation, we'll use a simple rule-based approach
-            log.info("DJL Fraud Detector initialized successfully");
-        } catch (Exception e) {
-            log.error("Failed to initialize DJL model", e);
-            throw new ModelLoadException(MODEL_NAME, e);
+    /**
+     * Lazy initialization - only load model when first used
+     */
+    private synchronized void ensureInitialized() {
+        if (!initialized) {
+            try {
+                log.info("Lazy initializing DJL Fraud Detector...");
+                // In production, you would load a real pre-trained model
+                // For basic implementation, we'll use a simple rule-based approach
+                initialized = true;
+                log.info("DJL Fraud Detector initialized successfully");
+            } catch (Exception e) {
+                log.error("Failed to initialize DJL model", e);
+                throw new ModelLoadException(MODEL_NAME, e);
+            }
         }
     }
     
     @Override
     public FraudDetectionResult.ModelPrediction detect(Transaction transaction) {
+        ensureInitialized();
         try {
             log.debug("Running DJL fraud detection for transaction {}", transaction.getId());
             
@@ -111,13 +116,5 @@ public class DJLFraudDetector implements FraudDetectionStrategy {
             return "Suspicious pattern detected by DJL model";
         }
         return "Normal transaction pattern";
-    }
-    
-    @PreDestroy
-    public void cleanup() {
-        if (model != null) {
-            model.close();
-            log.info("DJL model resources released");
-        }
     }
 }

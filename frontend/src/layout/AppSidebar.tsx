@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useContext } from "react";
 import { Link, useLocation } from "react-router";
 
 // Assume these icons are imported from an icon library
@@ -16,6 +16,8 @@ import {
   UserCircleIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
+import { AuthContext } from "../context/AuthContext";
+import { UserRole } from "../types/user.types";
 import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
@@ -23,24 +25,41 @@ type NavItem = {
   icon: React.ReactNode;
   path?: string;
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  roles?: UserRole[]; // Add role-based access
 };
 
-const navItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
+  {
+    icon: <UserCircleIcon />,
+    name: "User Profile",
+    path: "/profile",
+  },
   {
     icon: <GridIcon />,
-    name: "Dashboard",
-    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
+    name: "User Management",
+    path: "/users",
+    roles: [UserRole.ADMIN, UserRole.AUDITOR],
+  },
+  {
+    icon: <TableIcon />,
+    name: "Transactions",
+    path: "/transactions",
+    roles: [UserRole.ADMIN, UserRole.FINANCIAL_ANALYST, UserRole.AUDITOR, UserRole.SME_USER],
+  },
+  {
+    icon: <PieChartIcon />,
+    name: "Fraud Detection",
+    path: "/fraud-detection",
+    roles: [UserRole.ADMIN, UserRole.FINANCIAL_ANALYST, UserRole.AUDITOR],
   },
   {
     icon: <CalenderIcon />,
     name: "Calendar",
     path: "/calendar",
   },
-  {
-    icon: <UserCircleIcon />,
-    name: "User Profile",
-    path: "/profile",
-  },
+];
+
+const othersItems: NavItem[] = [
   {
     name: "Forms",
     icon: <ListIcon />,
@@ -59,9 +78,6 @@ const navItems: NavItem[] = [
       { name: "404 Error", path: "/error-404", pro: false },
     ],
   },
-];
-
-const othersItems: NavItem[] = [
   {
     icon: <PieChartIcon />,
     name: "Charts",
@@ -94,6 +110,8 @@ const othersItems: NavItem[] = [
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const authContext = useContext(AuthContext);
+  const user = authContext?.user;
   const location = useLocation();
 
   const [openSubmenu, setOpenSubmenu] = useState<{
@@ -104,6 +122,13 @@ const AppSidebar: React.FC = () => {
     {}
   );
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Filter menu items based on user role
+  const navItems = baseNavItems.filter(item => {
+    if (!item.roles) return true; // No role restriction
+    if (!user) return false; // Not logged in
+    return item.roles.includes(user.role);
+  });
 
   // const isActive = (path: string) => location.pathname === path;
   const isActive = useCallback(

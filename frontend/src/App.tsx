@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
 import SignIn from "./pages/AuthPages/SignIn";
 import UserProfiles from "./pages/UserProfiles";
+import UserManagement from "./pages/UserManagement";
+import TransactionManagement from "./pages/TransactionManagement";
+import FraudDetection from "./pages/FraudDetection";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import { AuthProvider } from "./context/AuthContext";
@@ -21,6 +24,9 @@ export default function App() {
             }
           >
             <Route path="/profile" element={<UserProfiles />} />
+            <Route path="/users" element={<UserManagement />} />
+            <Route path="/transactions" element={<TransactionManagement />} />
+            <Route path="/fraud-detection" element={<FraudDetection />} />
           </Route>
 
           {/* Auth Routes - Public */}

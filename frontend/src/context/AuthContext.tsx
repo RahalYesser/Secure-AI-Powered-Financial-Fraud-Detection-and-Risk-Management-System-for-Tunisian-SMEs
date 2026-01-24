@@ -1,6 +1,11 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import authService from '../services/authService';
-import { LoginRequest, UserResponse } from '../types/auth';
+import { UserResponse } from '../types/user.types';
+
+interface LoginRequest {
+  email: string;
+  password: string;
+}
 
 interface AuthContextType {
   user: UserResponse | null;
@@ -11,7 +16,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;

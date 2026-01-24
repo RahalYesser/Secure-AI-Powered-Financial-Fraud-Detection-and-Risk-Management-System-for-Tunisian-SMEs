@@ -4,8 +4,6 @@ import com.tunisia.financial.dto.response.FraudDetectionResult;
 import com.tunisia.financial.entity.Transaction;
 import com.tunisia.financial.exception.InferenceException;
 import com.tunisia.financial.exception.ModelLoadException;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -21,22 +19,29 @@ import java.time.DayOfWeek;
 public class TensorFlowFraudDetector implements FraudDetectionStrategy {
     
     private static final String MODEL_NAME = "TensorFlow-Java";
+    private volatile boolean initialized = false;
     
-    @PostConstruct
-    public void init() {
-        try {
-            log.info("Initializing TensorFlow Fraud Detector...");
-            // In production, load actual TensorFlow SavedModel
-            // savedModelBundle = SavedModelBundle.load("path/to/model", "serve");
-            log.info("TensorFlow Fraud Detector initialized successfully");
-        } catch (Exception e) {
-            log.error("Failed to initialize TensorFlow model", e);
-            throw new ModelLoadException(MODEL_NAME, e);
+    /**
+     * Lazy initialization - only load model when first used
+     */
+    private synchronized void ensureInitialized() {
+        if (!initialized) {
+            try {
+                log.info("Lazy initializing TensorFlow Fraud Detector...");
+                // In production, load actual TensorFlow SavedModel
+                // savedModelBundle = SavedModelBundle.load("path/to/model", "serve");
+                initialized = true;
+                log.info("TensorFlow Fraud Detector initialized successfully");
+            } catch (Exception e) {
+                log.error("Failed to initialize TensorFlow model", e);
+                throw new ModelLoadException(MODEL_NAME, e);
+            }
         }
     }
     
     @Override
     public FraudDetectionResult.ModelPrediction detect(Transaction transaction) {
+        ensureInitialized();
         try {
             log.debug("Running TensorFlow fraud detection for transaction {}", transaction.getId());
             
@@ -122,15 +127,5 @@ public class TensorFlowFraudDetector implements FraudDetectionStrategy {
             return "Multiple fraud indicators detected by TensorFlow model";
         }
         return "Transaction appears legitimate";
-    }
-    
-    @PreDestroy
-    public void cleanup() {
-        try {
-            // In production: close TensorFlow session/model
-            log.info("TensorFlow model resources released");
-        } catch (Exception e) {
-            log.error("Error cleaning up TensorFlow resources", e);
-        }
     }
 }

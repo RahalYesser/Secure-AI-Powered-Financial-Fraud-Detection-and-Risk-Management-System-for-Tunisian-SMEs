@@ -48,6 +48,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     Page<Transaction> findByUserIdAndType(UUID userId, TransactionType type, Pageable pageable);
     
     /**
+     * Find transactions by user ID and created after a certain date
+     */
+    List<Transaction> findByUserIdAndCreatedAtAfter(UUID userId, Instant createdAt);
+    
+    /**
      * Find transaction by reference number
      */
     Optional<Transaction> findByReferenceNumber(String referenceNumber);

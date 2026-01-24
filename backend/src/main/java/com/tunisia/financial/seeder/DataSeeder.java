@@ -27,13 +27,17 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // Check if users table is empty
-        if (userRepository.count() == 0) {
-            log.info("Users table is empty. Starting data seeding...");
-            seedUsers();
-            log.info("Data seeding completed successfully!");
-        } else {
-            log.info("Users table already contains data. Skipping seeding.");
+        try {
+            // Check if users table is empty
+            if (userRepository.count() == 0) {
+                log.info("Users table is empty. Starting data seeding...");
+                seedUsers();
+                log.info("Data seeding completed successfully!");
+            } else {
+                log.info("Users table already contains data. Skipping seeding.");
+            }
+        } catch (Exception e) {
+            log.warn("Data seeding skipped - tables may not exist yet: {}", e.getMessage());
         }
     }
 

@@ -26,6 +26,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - MAVEN_OPTS=-XX:+TieredCompilation -XX:TieredStopAtLevel=1
     container_name: financial-backend
     environment:
       # Database Configuration
@@ -54,6 +56,11 @@ services:
       SPRING_AI_OLLAMA_CHAT_MODEL: llama2
     ports:
       - "8080:8080"
+    volumes:
+      # Cache for Spring AI models to avoid re-downloading
+      - spring-ai-cache:/tmp/spring-ai-onnx-generative
+      # Maven cache to speed up rebuilds
+      - maven-cache:/root/.m2
     depends_on:
       postgres:
         condition: service_healthy
@@ -101,4 +108,8 @@ volumes:
   postgres-data:
     driver: local
   pgadmin-data:
+    driver: local
+  spring-ai-cache:
+    driver: local
+  maven-cache:
     driver: local

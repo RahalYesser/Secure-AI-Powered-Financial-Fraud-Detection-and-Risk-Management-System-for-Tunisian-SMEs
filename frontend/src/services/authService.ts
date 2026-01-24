@@ -1,11 +1,19 @@
 import apiClient from './api';
 import { API_ENDPOINTS } from '../config/api';
-import {
-  LoginRequest,
-  LoginResponse,
-  RegisterRequest,
-  UserResponse,
-} from '../types/auth';
+import { UserResponse } from '../types/user.types';
+
+interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+interface LoginResponse {
+  token: string;
+  refreshToken: string;
+  userId: string;
+  email: string;
+  role: string;
+}
 
 /**
  * Authentication Service
@@ -26,17 +34,6 @@ class AuthService {
       this.setAuthData(response.data);
     }
     
-    return response.data;
-  }
-
-  /**
-   * Register new user
-   */
-  async register(userData: RegisterRequest): Promise<UserResponse> {
-    const response = await apiClient.post<UserResponse>(
-      API_ENDPOINTS.AUTH.REGISTER,
-      userData
-    );
     return response.data;
   }
 
