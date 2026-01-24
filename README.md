@@ -1,595 +1,307 @@
-# 🏦 AI-Powered Financial Fraud Detection System
+# AI-Powered Financial Risk & Fraud Management Platform
 
-> Secure Financial Transaction Management and Real-Time Fraud Detection System for Tunisian SMEs
+This repository contains a full-stack platform with:
+- A Spring Boot backend exposing REST APIs for authentication, transactions, fraud detection, fraud pattern analytics, and credit-risk assessment.
+- A React + TypeScript + Tailwind CSS frontend providing a role-aware dashboard for admins, analysts, auditors, and SME users.
 
-[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.java.net/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.9-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-## 📖 Overview
-
-A production-ready financial management system featuring **real-time AI-powered fraud detection** using ensemble machine learning models. Built for Tunisian Small and Medium Enterprises (SMEs) with enterprise-grade security, role-based access control, and comprehensive transaction management.
-
-### 🎯 Key Features
-
-- **🤖 Real-Time AI Fraud Detection** - Ensemble of 3 ML models (DJL/PyTorch, ONNX, TensorFlow)
-- **🔐 Enterprise Security** - JWT authentication, role-based access (RBAC), account lockout
-- **💼 Transaction Management** - PAYMENT, TRANSFER, WITHDRAWAL, DEPOSIT with status tracking
-- **👥 Multi-Role System** - ADMIN, AUDITOR, FINANCIAL_ANALYST, SME_USER with distinct permissions
-- **📊 Fraud Pattern Analytics** - Historical fraud tracking and review workflow
-- **🔍 Advanced Filtering** - Date range, status, type-based transaction queries
-- **📈 Statistics & Reporting** - Real-time KPIs and transaction analytics
-- **🐳 Docker Ready** - Fully containerized with Docker Compose
+Docker files are present in the repository, but the project is currently designed and validated to run locally (no Docker-based workflow is actively maintained).
 
 ---
 
-## 🏗️ Architecture
+## Table of Contents
+
+- [High-Level Architecture](#high-level-architecture)
+- [Repository Structure](#repository-structure)
+- [Running the Project Locally (No Docker)](#running-the-project-locally-no-docker)
+- [Core Features](#core-features)
+- [Documentation](#documentation)
+- [Testing and Tools](#testing-and-tools)
+- [Roadmap (High Level)](#roadmap-high-level)
+
+---
+
+## High-Level Architecture
 
 ### Technology Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Backend** | Java 21, Spring Boot 3.5.9 |
-| **Security** | Spring Security, JWT (JJWT 0.12.5) |
-| **Database** | PostgreSQL 16, Spring Data JPA |
-| **AI/ML** | Deep Java Library 0.30.0, ONNX Runtime 1.19.2, TensorFlow 0.5.0 |
-| **API Docs** | Swagger/OpenAPI 3.0 (SpringDoc 2.7.0) |
-| **Build** | Maven 3.9+, Docker Compose |
+| Layer       | Technology                                                |
+|------------|-----------------------------------------------------------|
+| Backend    | Java 21, Spring Boot 3.x, Spring Data JPA, Spring Security|
+| Database   | PostgreSQL 16                                             |
+| AI / ML    | DJL (PyTorch), ONNX Runtime, TensorFlow Java             |
+| Frontend   | React, TypeScript, Vite, Tailwind CSS, React Router      |
+| Build/Tools| Maven, Node.js, npm                                      |
 
-### System Architecture
+### System Overview
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Client Layer                            │
-│              (Mobile App / Web Dashboard / API)                 │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ HTTPS/JWT
-┌────────────────────────────▼────────────────────────────────────┐
-│                    Spring Boot Application                       │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Controllers (REST API)                                   │  │
-│  │  - AuthController, UserController                         │  │
-│  │  - TransactionController, FraudController                 │  │
-│  └────────────────┬─────────────────────────────────────────┘  │
-│                   │                                              │
-│  ┌────────────────▼─────────────────────────────────────────┐  │
-│  │  Security Layer                                           │  │
-│  │  - JWT Authentication Filter                              │  │
-│  │  - Role-Based Authorization (@PreAuthorize)               │  │
-│  └────────────────┬─────────────────────────────────────────┘  │
-│                   │                                              │
-│  ┌────────────────▼─────────────────────────────────────────┐  │
-│  │  Service Layer                                            │  │
-│  │  - UserService, TransactionService                        │  │
-│  │  - FraudDetectionService (Ensemble AI)                    │  │
-│  └──────────┬──────────────────────────┬────────────────────┘  │
-│             │                          │                        │
-│  ┌──────────▼──────────┐    ┌──────────▼──────────────────┐   │
-│  │  Repository Layer    │    │   AI Fraud Detectors        │   │
-│  │  - JPA Repositories  │    │   - DJLFraudDetector        │   │
-│  │  - Custom Queries    │    │   - ONNXFraudDetector       │   │
-│  └──────────┬──────────┘    │   - TensorFlowDetector      │   │
-│             │                └─────────────────────────────┘   │
-└─────────────┼──────────────────────────────────────────────────┘
-              │
-┌─────────────▼────────────────────────────────────────────────────┐
-│                      PostgreSQL Database                          │
-│  Tables: users, transactions, fraud_patterns                      │
-└───────────────────────────────────────────────────────────────────┘
-```
+- Backend exposes REST APIs under `/api/v1/**` for:
+  - Authentication and user management.
+  - Transaction creation, listing, and statistics.
+  - Fraud detection (ensemble of 3 models) and fraud pattern analytics.
+  - Credit-risk assessment and credit-risk statistics.
+- Frontend consumes these APIs to render:
+  - A consolidated dashboard (KPIs, charts, trends).
+  - Dedicated pages for transactions, fraud detection, and credit risk.
+  - Role-based navigation and restricted areas (Admin, Analyst, Auditor, SME).
+- PostgreSQL stores users, transactions, fraud patterns, credit-risk assessments, and related metadata.
+
+For a deeper backend view, see:
+- [backend/docs/BACKEND-OVERVIEW.md](backend/docs/BACKEND-OVERVIEW.md)
+- [backend/docs/BACKEND-API-GUIDE.md](backend/docs/BACKEND-API-GUIDE.md)
+
+For a deeper frontend view, see:
+- [frontend/docs/FRONTEND-OVERVIEW.md](frontend/docs/FRONTEND-OVERVIEW.md)
+- [frontend/docs/FRONTEND-FEATURES.md](frontend/docs/FRONTEND-FEATURES.md)
 
 ---
 
-## 🚀 Quick Start
+## Repository Structure
+
+```text
+.
+├── backend/                # Spring Boot application
+│   ├── src/main/java/      # REST controllers, services, entities, DTOs
+│   ├── src/main/resources/ # application.properties, model files, seeds
+│   ├── scripts/            # Shell scripts to exercise APIs end-to-end
+│   └── pom.xml             # Maven build definition
+├── frontend/               # React + TypeScript SPA
+│   ├── src/                # Components, pages, hooks, context, services
+│   ├── public/             # Static assets (logos, images)
+│   └── package.json        # Frontend dependencies and scripts
+└── README.md               # This global documentation
+```
+
+### Backend Folder Layout (Overview)
+
+- `backend/src/main/java/...`
+  - `controller/` – REST controllers exposing `/api/v1/**` endpoints.
+  - `service/` – business logic for auth, users, transactions, fraud, credit risk.
+  - `entity/` – JPA entities for `User`, `Transaction`, `FraudPattern`, `CreditRiskAssessment`, etc.
+  - `dto/` – request/response records used by the API and frontend.
+  - `repository/` – Spring Data JPA repositories.
+  - `config/` – security (JWT, CORS), OpenAPI/Swagger, and other infrastructure.
+  - `ai/fraud/` – wrappers around DJL, ONNX, and TensorFlow fraud detectors.
+- `backend/src/main/resources/`
+  - `application.properties` – Spring Boot and PostgreSQL configuration.
+  - `models/` – serialized AI model files (e.g., `.onnx`, `.pt`) if present.
+- `backend/scripts/`
+  - Shell scripts to run typical flows (auth, fraud detection, credit-risk, full flow).
+
+### Frontend Folder Layout (Overview)
+
+- `frontend/src/`
+  - `pages/` – top-level screens (Dashboard, Transactions, Fraud Detection, Credit Risk, Users, Profile).
+  - `components/` – reusable UI building blocks (tables, forms, cards, modals).
+  - `layout/` – `AppLayout`, header, sidebar, and protected route handling.
+  - `context/` – `AuthContext`, `SidebarContext`, `ThemeContext`.
+  - `services/` – API clients for backend endpoints.
+  - `types/` – TypeScript types matching backend DTOs.
+  - `utils/` – helper functions (formatting, charts, etc.).
+
+### Backend Modules (Conceptual)
+
+- Authentication & Security
+  - JWT-based stateless authentication.
+  - Role-based authorization guards on controllers.
+- User Management
+  - CRUD, locking/unlocking, and statistics by role.
+- Transactions
+  - Support for PAYMENT, TRANSFER, WITHDRAWAL, DEPOSIT.
+  - Status lifecycle: PENDING, COMPLETED, FAILED, FRAUD_DETECTED, CANCELLED.
+  - Statistics and time-series trends for dashboard KPIs.
+- Fraud Detection & Patterns
+  - Ensemble of DJL, ONNX, and TensorFlow-based detectors.
+  - Fraud pattern storage with pattern types, confidence, description, and metadata.
+  - Aggregated fraud statistics and pattern review workflow.
+- Credit Risk
+  - Credit-risk assessments for SME users based on financial metrics.
+  - Risk categories (LOW, MEDIUM, HIGH, CRITICAL) with scores and summaries.
+  - Sector-based and user-based statistics, plus high-risk and unreviewed views.
+
+### Frontend Modules (Conceptual)
+
+- Authentication & Layout
+  - Global `AuthContext` for authenticated user state and roles.
+  - `AppLayout` with header, sidebar, and protected routes.
+- Dashboard
+  - Aggregated KPIs for transactions, fraud patterns, credit risk, and users.
+  - Charts for transaction trends and credit-risk distribution.
+- Transactions Page
+  - Paginated table with filtering and detail views.
+- Fraud Detection Page
+  - Manual fraud detection trigger for a transaction.
+  - Fraud patterns table with review status and derived severity.
+- Credit Risk Page
+  - List of credit-risk assessments with filters.
+  - Modal to run a new credit-risk assessment for an SME user.
+  - Detail view for a single assessment.
+
+---
+
+## Running the Project Locally (No Docker)
+
+The recommended and validated way to run the platform is fully local (no containers). Docker files exist but are not maintained in this version.
 
 ### Prerequisites
 
-- **Java 21** or higher
-- **Maven 3.9+**
-- **Docker & Docker Compose** (for containerized deployment)
-- **PostgreSQL 16** (if running locally without Docker)
+- Java 21+
+- Maven 3.9+
+- Node.js 18+ (20+ recommended)
+- PostgreSQL 16 installed and running locally
 
-### 1. Clone Repository
-
-```bash
-git clone https://github.com/yourusername/financial-fraud-detection.git
-cd financial-fraud-detection
-```
-
-### 2. Run with Docker (Recommended)
+### Step 1 – Clone the Repository
 
 ```bash
-# Start PostgreSQL and application
-docker compose up -d --build
-
-# Application will be available at:
-# - API: http://localhost:8080
-# - Swagger UI: http://localhost:8080/swagger-ui.html
+git clone https://github.com/<your-username>/financial.git
+cd financial
 ```
 
-### 3. Run Locally (Without Docker)
+### Step 2 – Configure PostgreSQL (Backend Database)
+
+1. Ensure PostgreSQL is running (default port `5432`).
+2. Create the database and user (example configuration):
 
 ```bash
-# Configure PostgreSQL in application.properties
-# Update: spring.datasource.url, username, password
-
-# Build and run
-mvn clean install
-mvn spring-boot:run
+psql -U postgres
+CREATE DATABASE financial_db;
+CREATE USER financial_user WITH PASSWORD 'financial_pass';
+GRANT ALL PRIVILEGES ON DATABASE financial_db TO financial_user;
+\q
 ```
 
-### 4. Access Swagger Documentation
-
-Open your browser: **http://localhost:8080/swagger-ui.html**
-
----
-
-## 🔑 Authentication
-
-### User Roles & Permissions
-
-| Role | Permissions | Transaction Limit |
-|------|-------------|-------------------|
-| **ADMIN** | Full system access, user management, model updates | Unlimited |
-| **AUDITOR** | Read-only access, fraud pattern review | N/A |
-| **FINANCIAL_ANALYST** | Transaction analysis, fraud detection, status updates | Unlimited |
-| **SME_USER** | Own transactions only, create/view/cancel | 5,000 TND max |
-
-### Default Seeded Users
-
-The system seeds test users on first startup:
-
-```bash
-# ADMIN
-Email: admin1@financial.tn
-Password: Admin123!
-
-# AUDITOR
-Email: auditor1@financial.tn
-Password: Audit123!
-
-# FINANCIAL_ANALYST
-Email: analyst1@financial.tn
-Password: Analyst123!
-
-# SME_USER
-Email: sme1@company.tn
-Password: Sme123!
-```
-
-### Login & Get JWT Token
-
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin1@financial.tn",
-    "password": "Admin123!"
-  }'
-```
-
-**Response:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "type": "Bearer",
-  "userId": "uuid-123",
-  "email": "admin1@financial.tn",
-  "role": "ADMIN"
-}
-```
-
----
-
-## 📡 Critical API Endpoints
-
-### 🔐 Authentication
-
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/api/v1/auth/register` | Register new user | ❌ |
-| POST | `/api/v1/auth/login` | Login and get JWT token | ❌ |
-| POST | `/api/v1/auth/logout` | Logout (invalidate token) | ✅ |
-
-### 👤 User Management
-
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| GET | `/api/v1/users` | Get all users | ADMIN, AUDITOR |
-| GET | `/api/v1/users/{id}` | Get user by ID | ADMIN, AUDITOR, Self |
-| PUT | `/api/v1/users/{id}` | Update user | ADMIN, Self |
-| DELETE | `/api/v1/users/{id}` | Delete user | ADMIN |
-| POST | `/api/v1/users/{id}/lock` | Lock user account | ADMIN |
-| POST | `/api/v1/users/{id}/unlock` | Unlock account | ADMIN |
-
-### 💰 Transaction Management
-
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| POST | `/api/v1/transactions` | **Create transaction** (triggers AI fraud detection) | ALL |
-| GET | `/api/v1/transactions` | Get all transactions | ADMIN, AUDITOR, ANALYST |
-| GET | `/api/v1/transactions/{id}` | Get transaction by ID | ALL (own tx) |
-| GET | `/api/v1/transactions/user/{userId}` | Get user transactions | ADMIN, AUDITOR, ANALYST, Self |
-| PUT | `/api/v1/transactions/{id}/status` | Update status | ADMIN, ANALYST |
-| DELETE | `/api/v1/transactions/{id}/cancel` | Cancel pending transaction | ADMIN, Self |
-| GET | `/api/v1/transactions/statistics` | Get system statistics | ADMIN, AUDITOR, ANALYST |
-
-### 🤖 Fraud Detection
-
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| POST | `/api/v1/fraud/detect/{transactionId}` | Manual fraud detection | ADMIN, ANALYST |
-| GET | `/api/v1/fraud/patterns` | Get all fraud patterns | ADMIN, AUDITOR, ANALYST |
-| GET | `/api/v1/fraud/patterns/unreviewed` | Get unreviewed patterns | ADMIN, AUDITOR |
-| PUT | `/api/v1/fraud/patterns/{id}/review` | Review fraud pattern | ADMIN, AUDITOR |
-| GET | `/api/v1/fraud/patterns/transaction/{txId}` | Get patterns by transaction | ADMIN, AUDITOR, ANALYST |
-
----
-
-## 🔬 AI Fraud Detection System
-
-### How It Works
-
-Every transaction creation triggers **real-time AI fraud analysis**:
-
-```
-1. User creates transaction → Status: PENDING
-2. Extract features (amount, hour, type, user stats)
-3. Run 3 AI models in parallel:
-   ├─ DJL/PyTorch Model      → confidence: 0.35
-   ├─ ONNX/Scikit-learn Model → confidence: 0.40
-   └─ TensorFlow Model        → confidence: 0.38
-4. Ensemble vote (weighted average): 0.37
-5. Decision:
-   - If confidence >= 0.7 → Status: FRAUD_DETECTED 🚫
-   - If confidence < 0.7  → Status: COMPLETED ✅
-```
-
-### Fraud Features Analyzed
-
-- **Transaction Amount** - High amounts increase fraud probability
-- **Time of Day** - Transactions at odd hours (2-6 AM) flagged
-- **Transaction Type** - WITHDRAWAL higher risk than DEPOSIT
-- **User Behavior** - Frequency, average amount, account age
-- **Day of Week** - Weekend patterns analyzed
-
-### Model Performance (Current)
-
-| Model | Framework | Features | Accuracy |
-|-------|-----------|----------|----------|
-| DJL Model | PyTorch | 3 features | ~70% (rule-based) |
-| ONNX Model | Scikit-learn | 4 features | ~70% (rule-based) |
-| TensorFlow Model | TensorFlow | 5 features | ~70% (rule-based) |
-| **Ensemble Average** | - | Combined | **~70%** (rule-based) |
-
-> **Note:** Current models use rule-based logic for demonstration. Replace with trained ML models for 85-95% accuracy.
-
----
-
-## 💾 Database Schema
-
-### Core Tables
-
-**users**
-```sql
-- id (UUID, PK)
-- first_name, last_name, email (unique)
-- password (BCrypt hashed)
-- role (ADMIN, AUDITOR, FINANCIAL_ANALYST, SME_USER)
-- account_non_locked, failed_login_attempts
-- created_at, updated_at, last_login
-```
-
-**transactions**
-```sql
-- id (BIGSERIAL, PK)
-- user_id (UUID, FK → users)
-- type (PAYMENT, TRANSFER, WITHDRAWAL, DEPOSIT)
-- status (PENDING, COMPLETED, FAILED, FRAUD_DETECTED)
-- amount (DECIMAL)
-- fraud_score (DOUBLE)
-- reference_number (unique), receipt
-- description, created_at, updated_at
-```
-
-**fraud_patterns**
-```sql
-- id (BIGSERIAL, PK)
-- transaction_id (BIGINT, FK → transactions)
-- pattern_type (ENUM)
-- confidence (DOUBLE)
-- detector_model (VARCHAR) - which AI model detected it
-- reviewed (BOOLEAN), review_notes
-- created_at, reviewed_at
-```
-
----
-
-## 🧪 Testing
-
-### Run All Tests
-
-```bash
-mvn test
-```
-
-### Test with Postman/cURL
-
-**Example: Create Transaction**
-```bash
-curl -X POST http://localhost:8080/api/v1/transactions \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "PAYMENT",
-    "amount": 2500.00,
-    "description": "Office supplies purchase"
-  }'
-```
-
-**Response:**
-```json
-{
-  "id": 123,
-  "type": "PAYMENT",
-  "status": "COMPLETED",
-  "amount": 2500.00,
-  "fraudScore": 0.35,
-  "referenceNumber": "TXN-ABC123",
-  "userId": "uuid-456",
-  "userEmail": "sme1@company.tn",
-  "createdAt": "2026-01-23T10:30:00Z"
-}
-```
-
----
-
-## 📁 Project Structure
-
-```
-financial/
-├── src/
-│   ├── main/
-│   │   ├── java/com/tunisia/financial/
-│   │   │   ├── ai/fraud/              # AI fraud detectors
-│   │   │   │   ├── DJLFraudDetector.java
-│   │   │   │   ├── ONNXFraudDetector.java
-│   │   │   │   └── TensorFlowFraudDetector.java
-│   │   │   ├── config/                # Security, JWT, Swagger
-│   │   │   ├── controller/            # REST endpoints
-│   │   │   ├── dto/                   # Request/Response objects
-│   │   │   ├── entity/                # JPA entities
-│   │   │   ├── enumerations/          # Enums (Role, Status, Type)
-│   │   │   ├── exception/             # Custom exceptions
-│   │   │   ├── repository/            # Data access layer
-│   │   │   ├── seeder/                # Database seeders
-│   │   │   ├── service/               # Business logic
-│   │   │   └── validation/            # Custom validators
-│   │   └── resources/
-│   │       ├── application.properties
-│   │       └── models/                # AI model files (.pt, .onnx)
-│   └── test/                          # Unit & integration tests
-├── docker-compose.yml                 # Docker orchestration
-├── Dockerfile                         # Application container
-├── pom.xml                            # Maven dependencies
-└── README.md                          # This file
-```
-
----
-
-## 🔧 Configuration
-
-### Environment Variables
+3. Set the Spring Boot datasource to point to this database. Edit `backend/src/main/resources/application.properties` so the datasource section is consistent with your PostgreSQL setup, for example:
 
 ```properties
-# Database
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/financial_db
-SPRING_DATASOURCE_USERNAME=postgres
-SPRING_DATASOURCE_PASSWORD=your_password
+spring.datasource.url=jdbc:postgresql://localhost:5432/financial_db
+spring.datasource.username=financial_user
+spring.datasource.password=financial_pass
 
-# JWT
-JWT_SECRET=your-256-bit-secret-key-here
-JWT_EXPIRATION=86400000  # 24 hours in milliseconds
-
-# Server
-SERVER_PORT=8080
-```
-
-### application.properties
-
-```properties
-# Application
-spring.application.name=financial
-
-# Database
-spring.datasource.url=${SPRING_DATASOURCE_URL}
-spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
-spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
-
-# JWT
-jwt.secret=${JWT_SECRET}
-jwt.expiration=${JWT_EXPIRATION}
-
-# Swagger
-springdoc.api-docs.path=/api-docs
-springdoc.swagger-ui.path=/swagger-ui.html
 ```
 
----
+You can alternatively externalize these values using environment variables, but the above in-file configuration is sufficient for local development.
 
-## 🐳 Docker Deployment
+### Step 3 – Build and Run the Backend
 
-### docker-compose.yml
-
-```yaml
-version: '3.8'
-
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: financial_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  app:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/financial_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
-    depends_on:
-      - postgres
-
-volumes:
-  postgres_data:
-```
-
-### Commands
+From the project root:
 
 ```bash
-# Start services
-docker compose up -d
-
-# View logs
-docker compose logs -f app
-
-# Stop services
-docker compose down
-
-# Rebuild and start
-docker compose up -d --build
+cd backend
+./mvnw clean package
+./mvnw spring-boot:run
 ```
 
----
+The backend will listen on `http://localhost:8080` and expose interactive API docs (Swagger UI) at `http://localhost:8080/swagger-ui.html`.
 
-## 📊 API Response Examples
+### Step 4 – (Optional) Run Backend Test Scripts
 
-### Success Response (Transaction Creation)
+With the backend running, you can execute example flows from `backend/scripts/`, e.g.:
 
-```json
-{
-  "id": 42,
-  "type": "WITHDRAWAL",
-  "status": "COMPLETED",
-  "amount": 3500.00,
-  "userId": "550e8400-e29b-41d4-a716-446655440000",
-  "userEmail": "sme1@company.tn",
-  "description": "ATM withdrawal",
-  "fraudScore": 0.42,
-  "referenceNumber": "TXN-8A9B2C3D",
-  "receipt": "RCP-4E5F6G7H",
-  "createdAt": "2026-01-23T14:30:00Z",
-  "updatedAt": "2026-01-23T14:30:01Z"
-}
+```bash
+cd backend
+./scripts/test-complete-fraud-flow.sh
 ```
 
-### Fraud Detected Response
+These scripts log in with seeded users, create transactions, run fraud detection, and exercise credit-risk endpoints.
 
-```json
-{
-  "id": 43,
-  "type": "WITHDRAWAL",
-  "status": "FRAUD_DETECTED",
-  "amount": 15000.00,
-  "fraudScore": 0.87,
-  "referenceNumber": "TXN-9B0C1D2E",
-  "createdAt": "2026-01-23T03:15:00Z"
-}
+### Step 5 – Install Dependencies and Run the Frontend
+
+In a new terminal, from the project root:
+
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-### Error Response
-
-```json
-{
-  "timestamp": "2026-01-23T14:30:00Z",
-  "status": 400,
-  "error": "Bad Request",
-  "message": "Transaction amount exceeds limit for SME users: 5000",
-  "path": "/api/v1/transactions"
-}
-```
+By default, the frontend runs on `http://localhost:5173` (Vite), calling the backend at `http://localhost:8080`.
 
 ---
 
-## 🛡️ Security Features
+## Core Features
 
-- ✅ **JWT Authentication** - Stateless token-based auth
-- ✅ **BCrypt Password Hashing** - Industry-standard encryption
-- ✅ **Role-Based Access Control** - Granular permissions per endpoint
-- ✅ **Account Lockout** - 5 failed login attempts → locked
-- ✅ **Password Validation** - Minimum length, complexity requirements
-- ✅ **SQL Injection Protection** - JPA parameterized queries
-- ✅ **CORS Configuration** - Cross-origin request security
-- ✅ **Audit Logging** - All critical actions logged
-- ✅ **Transaction Limits** - Role-based amount restrictions
+### Authentication and Roles
 
----
+- JWT-based login and stateless auth.
+- Roles: ADMIN, FINANCIAL_ANALYST, SME_USER, AUDITOR.
+- Role-aware navigation and permission checks in both backend and frontend.
 
-## 🚧 Known Limitations & Future Work
+Default test users (seeded on first run):
 
-### Current Limitations
+- ADMIN: `admin1@financial.tn` / `Admin123!`
+- AUDITOR: `auditor1@financial.tn` / `Audit123!`
+- FINANCIAL_ANALYST: `analyst1@financial.tn` / `Analyst123!`
+- SME_USER: `sme1@company.tn` / `Sme123!`
 
-1. **AI Models** - Currently using rule-based placeholders (need trained ML models)
-2. **Async Processing** - Fraud detection runs synchronously (plan to add async with RabbitMQ)
-3. **Real-time Updates** - No WebSocket support yet (planned for dashboard)
-4. **Email Verification** - Registration doesn't send verification emails
-5. **Password Reset** - Token-based reset not implemented
+### Transaction Management
 
-### Planned Features
+- Create and manage transactions of multiple types (PAYMENT, TRANSFER, WITHDRAWAL, DEPOSIT).
+- Role-based access to global vs. own transactions.
+- Transaction statistics and trends used by the dashboard.
 
-- [ ] Train real ML models on IEEE-CIS fraud dataset
-- [ ] Add async fraud detection with message queue
-- [ ] WebSocket for real-time dashboard updates
-- [ ] Credit risk assessment module
-- [ ] LLM-powered financial intelligence
-- [ ] System health monitoring with AI agent
-- [ ] Advanced analytics dashboard
-- [ ] Email notifications for fraud alerts
-- [ ] Multi-factor authentication (MFA)
-- [ ] Geolocation-based fraud detection
+### Fraud Detection & Patterns
 
----
+- Manual fraud detection endpoint for any transaction.
+- Ensemble of three models (DJL, ONNX, TensorFlow) with feature extraction.
+- Fraud patterns persisted with:
+  - Pattern type (e.g., high-amount, late-night, borderline suspicious).
+  - Confidence and detector model.
+  - Structured metadata (amount, hour, isWeekend, etc.).
+- Review workflow: mark patterns as reviewed, and see unresolved vs. reviewed counts.
 
-## 📝 License
+### Credit-Risk Assessment
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- Accepts structured financial data per SME user (revenue, assets, liabilities, cash flow, credit history, sector, etc.).
+- Produces a risk score, risk category, assessment summary, and model-level predictions.
+- Stores persistent `CreditRiskAssessment` entities with review notes and timestamps.
+- Provides statistics:
+  - Counts by risk category.
+  - High-risk and unreviewed assessments.
+  - Sector-based and user-based aggregations.
 
----
+### Dashboard & Analytics (Frontend)
 
-## 👨‍💻 Author
-
-**Yesser Rahal**  
-Email: contact@example.com  
-GitHub: [@yourusername](https://github.com/yourusername)
+- Combined view of:
+  - Total transactions, amounts, and per-status breakdown.
+  - Fraud patterns and unresolved vs. reviewed counts.
+  - Credit-risk distribution by risk category (LOW/MEDIUM/HIGH/CRITICAL).
+  - User statistics by role and account status.
 
 ---
 
-## 🙏 Acknowledgments
+## Documentation
 
-- **Spring Boot** - Application framework
-- **Deep Java Library (DJL)** - AI/ML integration
-- **IEEE-CIS Fraud Detection Dataset** - Training data reference
-- **Stripe & PayPal** - Fraud detection architecture inspiration
-
----
-
-## 📚 Additional Resources
-
-- [Swagger API Documentation](http://localhost:8080/swagger-ui.html) - Interactive API testing
-- [Spring Boot Docs](https://docs.spring.io/spring-boot/docs/current/reference/html/)
-- [Deep Java Library](https://djl.ai/) - ML framework documentation
-- [IEEE-CIS Fraud Dataset](https://www.kaggle.com/c/ieee-fraud-detection)
+- Global overview (this file): architecture, structure, and critical features.
+- Backend docs (more detail):
+  - [backend/docs/BACKEND-OVERVIEW.md](backend/docs/BACKEND-OVERVIEW.md) – modules, entities, and data model.
+  - [backend/docs/BACKEND-API-GUIDE.md](backend/docs/BACKEND-API-GUIDE.md) – main REST endpoints and flows.
+- Frontend docs (more detail):
+  - [frontend/docs/FRONTEND-OVERVIEW.md](frontend/docs/FRONTEND-OVERVIEW.md) – structure, routing, and state.
+  - [frontend/docs/FRONTEND-FEATURES.md](frontend/docs/FRONTEND-FEATURES.md) – pages, components, and UX.
 
 ---
 
-**Built with ❤️ for secure financial transactions in Tunisia**
+## Testing and Tools
+
+The backend includes several shell scripts under `backend/scripts/` to exercise end-to-end flows (authentication, transactions, fraud detection, credit-risk).
+
+Basic local test flow:
+
+1. Start the backend (`./mvnw spring-boot:run`).
+2. Run a test script from `backend/scripts/` (for example, full fraud flow or credit-risk test).
+3. Start the frontend (`npm run dev` in `frontend/`) and navigate through the dashboard, transactions, fraud detection, and credit-risk pages.
+
+---
+
+## Roadmap (High Level)
+
+- Improve ONNX model integration with a fully trained model.
+- Add automatic fraud detection triggers on transaction creation.
+- Enable transaction blocking and alerting for high-confidence fraud.
+- Extend credit-risk models and introduce model training pipelines.
+- Add richer monitoring, logging, and production readiness features.
+
+---
+
+This README is the single source of truth for the global architecture. For implementation-level detail, refer to the backend and frontend documentation linked above.
